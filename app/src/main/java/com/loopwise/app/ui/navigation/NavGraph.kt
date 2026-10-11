@@ -20,6 +20,7 @@ import com.loopwise.app.ui.journal.NewJournalEntryScreen
 import com.loopwise.app.ui.reports.ReportsScreen
 import com.loopwise.app.ui.reports.ReportsViewModel
 import com.loopwise.app.ui.schedule.ScheduleScreen
+import com.loopwise.app.ui.schedule.ScheduleViewModel
 import com.loopwise.app.ui.taskedit.CreateTaskScreen
 import com.loopwise.app.ui.taskedit.CreateTaskViewModel
 import com.loopwise.app.ui.timer.TimerScreen
@@ -76,7 +77,10 @@ private fun MainNavHost() {
                     onAddTask = { navController.navigate(Destination.CreateTask.route) },
                 )
             }
-            composable(Destination.Schedule.route) { ScheduleScreen() }
+            composable(Destination.Schedule.route) {
+                val viewModel: ScheduleViewModel = koinViewModel()
+                ScheduleScreen(viewModel = viewModel)
+            }
             composable(Destination.Timer.route) {
                 val viewModel: TimerViewModel = koinViewModel()
                 TimerScreen(viewModel = viewModel)

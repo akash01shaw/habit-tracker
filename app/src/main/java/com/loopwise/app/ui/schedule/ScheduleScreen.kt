@@ -2,15 +2,62 @@
 
 package com.loopwise.app.ui.schedule
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.loopwise.app.ui.common.ComingSoonBody
+import com.loopwise.app.ui.schedule.components.AgendaView
+import com.loopwise.app.ui.schedule.components.ScheduleHeader
+import com.loopwise.app.ui.schedule.components.WeekGrid
 
+/**
+ * Tapping a block doesn't navigate anywhere yet (spec §2.5 wants "jump into edit or
+ * start its timer") — that needs either a shared cross-tab ViewModel or a nav
+ * argument to pass the target habit/date, deliberately left for a follow-up rather
+ * than wiring something half-working without a chance to test it this round.
+ */
 @Composable
-fun ScheduleScreen() {
+fun ScheduleScreen(viewModel: ScheduleViewModel) {
+    val state by viewModel.uiState.collectAsState()
+
     Scaffold(topBar = { TopAppBar(title = { Text("Schedule") }) }) { padding ->
-        ComingSoonBody(padding, "Week-grid schedule view is coming in Phase 2.")
+        if (!state.isSignedIn) {
+            ComingSoonBody(padding, "Sign in to see your schedule.")
+            return@Scaffold
+        }
+
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            ScheduleHeader(
+                weekStart = state.weekStart,
+                viewMode = state.viewMode,
+                onPreviousWeek = viewModel::previousWeek,
+                onNextWeek = viewModel::nextWeek,
+                onToday = viewModel::goToCurrentWeek,
+                onViewModeChange = viewModel::setViewMode,
+            )
+
+            if (state.blocks.isEmpty()) {
+                Text(
+                    "Nothing with a time set this week — add a reminder to a habit, or a due time to a task, to see it here.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+
+            when (state.viewMode) {
+                ScheduleViewMode.AGENDA -> AgendaView(state.weekDates, state.blocks, onBlockClick = {})
+                ScheduleViewMode.GRID -> WeekGrid(state.weekDates, state.blocks, onBlockClick = {})
+            }
+        }
     }
 }

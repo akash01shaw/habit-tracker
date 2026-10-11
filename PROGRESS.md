@@ -7,6 +7,54 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-11 (cont'd) — Built Schedule; the 5-tab IA is now fully implemented
+
+**Objective:** Build Schedule (spec §2.5) — the last placeholder tab. User asked to
+keep building features and defer device testing to one consolidated pass, so this
+was built and verified at the compile/lint/unit-test level only, same as Timer.
+
+**Built:**
+- `buildScheduleBlocks()`: pure function turning a week's habits + tasks into
+  "blocks" (date, time, label, color). Only habits with a reminder set and tasks
+  with a due time produce a block — spec says the view is "auto-populated from
+  habits/tasks that have a time window," so anything without one is correctly
+  skipped rather than guessed at. Kept as a standalone testable function, same
+  pattern as `HabitReportMath`.
+- `ScheduleViewModel`: week navigation (prev/next/today), reactive to the DB like
+  Today/Reports (not imperative like Timer — a calendar view has nothing to
+  "tick").
+- Two view modes per spec: **Agenda** (day-grouped list, default — spec explicitly
+  calls this out as the simpler option "for smaller screens") and **Grid** (7-day ×
+  fixed 6 AM-10 PM hour grid). Deliberately implemented the grid as a plain
+  Row-per-hour composition rather than a pixel-positioned/time-proportional canvas
+  — much lower risk of a subtle layout bug sitting undetected until the next device
+  test, at the cost of not dynamically sizing to the data's actual time range.
+- Habit and task blocks are both single points in time (neither carries a duration
+  in the data model), so every block fits in exactly one hour cell — no
+  multi-row-spanning layout needed.
+- Tapping a block is intentionally not wired to anything yet. Spec wants it to
+  "jump into edit or start its timer," but doing that properly needs either a
+  shared cross-tab ViewModel or a nav argument to carry the target habit/date
+  across tabs — flagged as a known gap rather than wiring something half-working
+  blind.
+
+**Verified:** Two real compile errors on the first attempt, both fixed:
+missing `@OptIn(ExperimentalMaterial3Api::class)` on the new screen (same recurring
+pattern as every other `TopAppBar` usage in this codebase — worth remembering),
+and an invalid `Modifier.padding(horizontal=, top=, bottom=)` call (that overload
+doesn't exist — padding is either `start/top/end/bottom` or `horizontal/vertical`,
+not a mix). Second attempt: `gradlew assembleDebug testDebugUnitTest lintDebug`
+green, 7 new unit tests for `buildScheduleBlocks` (36 total project-wide), lint
+unchanged at 0 errors/28 warnings.
+
+**Status: the 5-tab IA from spec §3 is now fully built** — Today, Schedule, Timer,
+Reports, Journal all have real implementations, none are placeholders anymore.
+
+**Still NOT device-verified**: Schedule and Timer, both built this session. Also
+still open: Google Sign-In, an actual reminder notification firing.
+
+---
+
 ## 2026-10-11 (cont'd) — Published to GitHub; built the Focus Timer
 
 **Objective:** Get the project under version control and publicly backed up, then
@@ -480,11 +528,16 @@ widgets).
 - **Device-verified so far**: sign-up, habit creation/logging (all types), Reports,
   the avoidance-habit live streak clock, and Journal (text + mood, habit-linking).
   Two chip-wrapping bugs found and fixed.
-- **Built but NOT yet device-verified**: the Focus Timer (just built this session —
-  compiles/lints/tests clean, but the ring, tick loop, countdown auto-stop, and
-  habit-auto-feed-on-stop have never actually run).
+- **Built but NOT yet device-verified**: Focus Timer (ring, tick loop, countdown
+  auto-stop, habit-auto-feed-on-stop) and Schedule (agenda list, week grid, week
+  navigation) — both compile/lint/test clean but have never actually run. User
+  wants to batch these into one consolidated device-testing pass rather than
+  testing each feature individually.
+- **Known gap, not a bug**: tapping a Schedule block does nothing yet — spec wants
+  it to jump into habit edit or start the linked timer, deferred until there's a
+  clean way to carry a habit/date argument across bottom-tab destinations.
 - **Still genuinely unverified**: Google Sign-In, a reminder notification actually
-  firing, Schedule tab (still a placeholder).
+  firing.
 - **Google Sign-In isn't wired up** — `GOOGLE_WEB_CLIENT_ID` in `local.properties` is
   still a placeholder. Email/password is the only working sign-in method right now.
 - **Security follow-up from the 2026-09-17 Supabase test**: "Confirm email" is off
@@ -495,9 +548,8 @@ widgets).
   `gh` CLI) is installed on this machine so builds/lint/tests/`adb`/git push can all
   run without Android Studio. Still no Android Studio and no emulator — device
   testing goes through the physical phone over wireless `adb`.
-- **Feature-wise**, Milestone 4 (avoidance habits, Reports, Journal, local
-  notifications) plus the Focus Timer are built and compile/lint/test-verified. Not
-  started: Schedule/calendar view (the last Phase 1/2 placeholder), shared
-  habits/accountability, CSV export (Phase 2), and all of Phase 3 (Health Connect
-  sync, home-screen widgets, yearly heatmap, group-streak logic, partner-nudge
-  notifications, checklist journal entries).
+- **Feature-wise, the full 5-tab IA (spec §3) is now built**: Today, Schedule, Timer,
+  Reports, and Journal all have real implementations — nothing left as a
+  placeholder. Not started: shared habits/accountability, CSV export (Phase 2), and
+  all of Phase 3 (Health Connect sync, home-screen widgets, yearly heatmap,
+  group-streak logic, partner-nudge notifications, checklist journal entries).

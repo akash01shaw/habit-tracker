@@ -13,6 +13,7 @@ import com.loopwise.app.ui.auth.AuthViewModel
 import com.loopwise.app.ui.habitedit.CreateEditHabitViewModel
 import com.loopwise.app.ui.journal.JournalViewModel
 import com.loopwise.app.ui.reports.ReportsViewModel
+import com.loopwise.app.ui.schedule.ScheduleViewModel
 import com.loopwise.app.ui.taskedit.CreateTaskViewModel
 import com.loopwise.app.ui.timer.TimerViewModel
 import com.loopwise.app.ui.today.TodayViewModel
@@ -47,4 +48,5 @@ val appModule = module {
     viewModel { JournalViewModel(get(), get(), get()) }
     viewModel { CreateTaskViewModel(get(), get(), get()) }
     viewModel { TimerViewModel(get(), get(), get()) }
+    viewModel { ScheduleViewModel(get(), get(), get()) }
 }
