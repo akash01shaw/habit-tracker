@@ -7,6 +7,68 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-11 (cont'd) — Published to GitHub; built the Focus Timer
+
+**Objective:** Get the project under version control and publicly backed up, then
+keep building — the Focus Timer (spec §2.6), the last major placeholder screen in
+the 5-tab IA besides Schedule.
+
+**GitHub setup:** First-ever commit for this project (previously zero version
+control for ~a month of work). Installed and authenticated `gh` CLI via device-code
+flow. Public repo at `github.com/akash01shaw/habit-tracker`. Before committing:
+- Added `.claude/` to `.gitignore` (local tooling state, not project source).
+- Added `/Reference/` to `.gitignore` and excluded it from the push — it holds
+  third-party app screenshots used only as internal design inspiration; publishing
+  them in a public repo risked a real copyright/redistribution concern, flagged to
+  and confirmed by the user before pushing.
+- Ran an explicit secret scan across every staged file (grepping for the real
+  Supabase publishable key, DB password, and JWT substrings) before the first
+  commit, and again after the final file set was locked in — both came back clean.
+  `local.properties` (the real secrets file) was never staged at all; it's been
+  gitignored since Milestone 1.
+- Git identity set to GitHub's private no-reply email format
+  (`<id>+<login>@users.noreply.github.com`) rather than a real address, since the
+  repo is public and the account has no public name/email set.
+
+**Built: Focus Timer** (spec §2.6) — full vertical slice:
+- Domain: `TimerSession`, `TimerMode` (stopwatch/countdown), `TimerEvent`
+  (start/pause/resume/stop + timestamp). Schema needed no changes — the
+  `timer_sessions` table was already in the very first migration from Milestone 1,
+  just unused until now.
+- `TimerViewModel` is deliberately a single imperative state machine (manual
+  coroutine tick loop started/cancelled on start/pause/resume/stop), unlike the
+  mostly-reactive-from-the-database ViewModels elsewhere — a running timer is
+  inherently stateful/imperative, not naturally a transformation of DB data. The
+  Focus habit picker list is the one piece still a live DB subscription.
+  Countdown mode auto-stops exactly at target and persists the session on every
+  transition (not just at the end), so an in-progress session survives a process
+  death.
+- Spec §2.6's "logged time feeds that habit's progress automatically": on Stop, if
+  the linked habit is DURATION type, adds the session's elapsed minutes to that
+  habit's today-progress (reads current value first, then calls the same
+  `logProgress` path Today's habit rows use — no new write path needed).
+- UI: `TimerRing` (custom Compose Canvas arc — static track + colored progress arc,
+  empty progress for stopwatch since there's no fixed target), Stopwatch/Countdown
+  tab row, Focus habit dropdown, +/-5min duration stepper (countdown only, idle
+  only), Start/Pause/Resume/Stop buttons that swap based on run state, and a
+  Start/Pause/Resume/Stop event log below the ring.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` — green on the
+first attempt. Added 6 unit tests for `TimerUiState`'s computed display/progress
+logic (stopwatch vs. countdown, clamping, habit-name resolution) — 29 tests total
+project-wide now. 4 new lint warnings, all "newer dependency version available"
+noise (Kotlin 2.4.20→2.4.21 etc.), nothing code-related; left alone per the
+established policy of not chasing every patch bump.
+
+**Still NOT verified:** Timer has never been run on a device — the ring, the actual
+tick-by-tick countdown, the auto-stop-at-target behavior, and the
+habit-auto-feed-on-stop logic are all exactly the kind of thing that could look
+right on paper and still have a bug (off-by-one on the countdown boundary, a race
+between the tick loop and the UI reading stale state, etc.). Also still open from
+before: Google Sign-In, an actual reminder notification firing, Schedule tab.
+
+---
+
 ## 2026-10-11 (cont'd) — Fixed chip wrapping, verified Journal on device
 
 **Objective:** Fix the two cosmetic bugs found in the previous device-testing round,
@@ -411,32 +473,31 @@ widgets).
 ---
 
 ## Open items / next steps (last reviewed 2026-10-11)
-- **The app now runs** — verified on the user's physical Galaxy S23 Ultra via
-  wireless `adb`. Sign-up, habit creation/logging, Reports, the avoidance-habit live
-  streak clock, and Journal (both text and mood entries, habit-linking) are all
-  confirmed working against the real Supabase backend. The two chip-label wrapping
-  bugs found in the first round are fixed and reverified on-device.
+- **Published**: public repo at `github.com/akash01shaw/habit-tracker`, first commit
+  in. `Reference/` (third-party screenshots) and `.claude/` deliberately kept out of
+  git — see the "Published to GitHub" log entry for why. Plan: keep committing and
+  pushing as features land, not waiting for some notion of "fully done."
+- **Device-verified so far**: sign-up, habit creation/logging (all types), Reports,
+  the avoidance-habit live streak clock, and Journal (text + mood, habit-linking).
+  Two chip-wrapping bugs found and fixed.
+- **Built but NOT yet device-verified**: the Focus Timer (just built this session —
+  compiles/lints/tests clean, but the ring, tick loop, countdown auto-stop, and
+  habit-auto-feed-on-stop have never actually run).
 - **Still genuinely unverified**: Google Sign-In, a reminder notification actually
-  firing (permission prompt and scheduling code run, but no alarm was left to
-  actually trigger), Schedule/Timer tabs (still placeholders).
+  firing, Schedule tab (still a placeholder).
 - **Google Sign-In isn't wired up** — `GOOGLE_WEB_CLIENT_ID` in `local.properties` is
   still a placeholder. Email/password is the only working sign-in method right now.
 - **Security follow-up from the 2026-09-17 Supabase test**: "Confirm email" is off
-  project-wide on the live Supabase project (a side effect of getting a test session
-  working) — should be turned back on before any real/public use. Also three
-  throwaway test accounts are now sitting in Authentication → Users
-  (`loopwise.verify.9f3a@...`, `loopwise.verify.b7c2@...`, and whatever email was
-  used for the 2026-10-11 device sign-up test) if the user wants a clean list.
-- **No version control** — this project has never been a git repo. Worth setting up
-  given how much work is now in it.
-- A local dev toolchain (JDK 17, Android SDK cmdline-tools, Gradle, platform-tools)
-  is installed on this machine so builds/lint/tests/`adb` can be run without Android
-  Studio — user confirmed (2026-09-15) to keep it. Still no Android Studio and no
-  emulator — device testing now goes through the physical phone over wireless `adb`
-  instead.
+  project-wide on the live Supabase project — should be turned back on before any
+  real/public use. A few throwaway test accounts are also sitting in
+  Authentication → Users if the user wants a clean list.
+- A local dev toolchain (JDK 17, Android SDK cmdline-tools, Gradle, platform-tools,
+  `gh` CLI) is installed on this machine so builds/lint/tests/`adb`/git push can all
+  run without Android Studio. Still no Android Studio and no emulator — device
+  testing goes through the physical phone over wireless `adb`.
 - **Feature-wise**, Milestone 4 (avoidance habits, Reports, Journal, local
-  notifications) is complete, compile/lint/test-verified, and now partially
-  device-verified too. Not started: Phase 2 of the spec (shared
-  habits/accountability, Schedule/calendar view, Focus timer, CSV export) and Phase 3
-  (Health Connect sync, home-screen widgets, yearly heatmap, group-streak logic,
-  partner-nudge notifications, checklist journal entries).
+  notifications) plus the Focus Timer are built and compile/lint/test-verified. Not
+  started: Schedule/calendar view (the last Phase 1/2 placeholder), shared
+  habits/accountability, CSV export (Phase 2), and all of Phase 3 (Health Connect
+  sync, home-screen widgets, yearly heatmap, group-streak logic, partner-nudge
+  notifications, checklist journal entries).

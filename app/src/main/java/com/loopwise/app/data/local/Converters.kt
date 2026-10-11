@@ -5,6 +5,10 @@ import com.loopwise.app.domain.model.Frequency
 import com.loopwise.app.domain.model.HabitType
 import com.loopwise.app.domain.model.JournalEntryType
 import com.loopwise.app.domain.model.JournalVisibility
+import com.loopwise.app.domain.model.TimerEvent
+import com.loopwise.app.domain.model.TimerEventType
+import com.loopwise.app.domain.model.TimerMode
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,6 +17,9 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 private val json = Json { ignoreUnknownKeys = true }
+
+@Serializable
+private data class TimerEventJson(val type: String, val atEpochMilli: Long)
 
 class Converters {
     @TypeConverter
@@ -66,4 +73,21 @@ class Converters {
 
     @TypeConverter
     fun stringToJournalVisibility(value: String): JournalVisibility = JournalVisibility.fromWire(value)
+
+    @TypeConverter
+    fun timerModeToString(value: TimerMode): String = value.wireValue
+
+    @TypeConverter
+    fun stringToTimerMode(value: String): TimerMode = TimerMode.fromWire(value)
+
+    @TypeConverter
+    fun timerEventsToJson(value: List<TimerEvent>): String =
+        json.encodeToString(value.map { TimerEventJson(it.type.wireValue, it.at.toEpochMilli()) })
+
+    @TypeConverter
+    fun jsonToTimerEvents(value: String): List<TimerEvent> =
+        runCatching {
+            json.decodeFromString<List<TimerEventJson>>(value)
+                .map { TimerEvent(TimerEventType.fromWire(it.type), Instant.ofEpochMilli(it.atEpochMilli)) }
+        }.getOrDefault(emptyList())
 }

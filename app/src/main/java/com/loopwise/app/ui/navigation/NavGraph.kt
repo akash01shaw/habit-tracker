@@ -23,6 +23,7 @@ import com.loopwise.app.ui.schedule.ScheduleScreen
 import com.loopwise.app.ui.taskedit.CreateTaskScreen
 import com.loopwise.app.ui.taskedit.CreateTaskViewModel
 import com.loopwise.app.ui.timer.TimerScreen
+import com.loopwise.app.ui.timer.TimerViewModel
 import com.loopwise.app.ui.today.TodayScreen
 import com.loopwise.app.ui.today.TodayViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -76,7 +77,10 @@ private fun MainNavHost() {
                 )
             }
             composable(Destination.Schedule.route) { ScheduleScreen() }
-            composable(Destination.Timer.route) { TimerScreen() }
+            composable(Destination.Timer.route) {
+                val viewModel: TimerViewModel = koinViewModel()
+                TimerScreen(viewModel = viewModel)
+            }
             composable(Destination.Reports.route) {
                 val viewModel: ReportsViewModel = koinViewModel()
                 ReportsScreen(viewModel = viewModel)
