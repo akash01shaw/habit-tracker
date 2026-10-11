@@ -1,0 +1,18 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.claude/
+
+# Third-party reference screenshots used for design inspiration only —
+# not ours to redistribute in a public repo.
+/Reference/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+app/build/
+app/release/
+*.hprof

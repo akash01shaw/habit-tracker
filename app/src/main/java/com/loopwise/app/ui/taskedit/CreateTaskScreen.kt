@@ -1,0 +1,179 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
+package com.loopwise.app.ui.taskedit
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.loopwise.app.ui.common.TimePickerDialog
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+private val dateFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
+private val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
+
+@Composable
+fun CreateTaskScreen(viewModel: CreateTaskViewModel, onDone: () -> Unit) {
+    val state by viewModel.formState.collectAsState()
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.saved) {
+        if (state.saved) onDone()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("New Task") },
+                navigationIcon = {
+                    IconButton(onClick = onDone) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        ) {
+            OutlinedTextField(
+                value = state.title,
+                onValueChange = viewModel::onTitleChange,
+                label = { Text("Task title") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AssistChip(
+                    onClick = { showDatePicker = true },
+                    label = { Text(state.dueDate.format(dateFormatter)) },
+                )
+                AssistChip(
+                    onClick = { showTimePicker = true },
+                    label = { Text(state.dueTime?.format(timeFormatter) ?: "Add time") },
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FilterChip(
+                    selected = state.priorityFlag,
+                    onClick = viewModel::onPriorityToggle,
+                    label = { Text("Priority") },
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = state.reminderEnabled,
+                    onCheckedChange = viewModel::onReminderToggle,
+                    enabled = state.canEnableReminder,
+                )
+                Text(
+                    if (state.canEnableReminder) "Remind me at the due time" else "Set a time to enable a reminder",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            OutlinedTextField(
+                value = state.note,
+                onValueChange = viewModel::onNoteChange,
+                label = { Text("Note (optional)") },
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            )
+
+            state.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp))
+            }
+
+            Button(
+                onClick = viewModel::save,
+                enabled = !state.isSaving,
+                modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+            ) {
+                Text("Save Task")
+            }
+        }
+    }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = state.dueDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val date = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
+                        viewModel.onDueDateChange(date)
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        TimePickerDialog(
+            initial = state.dueTime ?: LocalTime.of(9, 0),
+            onConfirm = { time ->
+                viewModel.onDueTimeChange(time)
+                showTimePicker = false
+            },
+            onDismiss = { showTimePicker = false },
+        )
+    }
+}

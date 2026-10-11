@@ -1,0 +1,114 @@
+package com.loopwise.app.ui.navigation
+
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.loopwise.app.ui.auth.AuthViewModel
+import com.loopwise.app.ui.auth.SignInScreen
+import com.loopwise.app.ui.auth.SignUpScreen
+import com.loopwise.app.ui.habitedit.CreateEditHabitScreen
+import com.loopwise.app.ui.habitedit.CreateEditHabitViewModel
+import com.loopwise.app.ui.journal.JournalScreen
+import com.loopwise.app.ui.journal.JournalViewModel
+import com.loopwise.app.ui.journal.NewJournalEntryScreen
+import com.loopwise.app.ui.reports.ReportsScreen
+import com.loopwise.app.ui.reports.ReportsViewModel
+import com.loopwise.app.ui.schedule.ScheduleScreen
+import com.loopwise.app.ui.taskedit.CreateTaskScreen
+import com.loopwise.app.ui.taskedit.CreateTaskViewModel
+import com.loopwise.app.ui.timer.TimerScreen
+import com.loopwise.app.ui.today.TodayScreen
+import com.loopwise.app.ui.today.TodayViewModel
+import org.koin.androidx.compose.koinViewModel
+
+@Composable
+fun LoopwiseNavHost() {
+    val authViewModel: AuthViewModel = koinViewModel()
+    val user by authViewModel.currentUser.collectAsState()
+
+    if (user == null) {
+        AuthNavHost(authViewModel)
+    } else {
+        MainNavHost()
+    }
+}
+
+@Composable
+private fun AuthNavHost(authViewModel: AuthViewModel) {
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = Destination.SignIn.route) {
+        composable(Destination.SignIn.route) {
+            SignInScreen(
+                viewModel = authViewModel,
+                onNavigateToSignUp = { navController.navigate(Destination.SignUp.route) },
+            )
+        }
+        composable(Destination.SignUp.route) {
+            SignUpScreen(
+                viewModel = authViewModel,
+                onNavigateToSignIn = { navController.popBackStack() },
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainNavHost() {
+    val navController = rememberNavController()
+    Scaffold(bottomBar = { LoopwiseBottomNavBar(navController) }) { padding ->
+        NavHost(
+            navController = navController,
+            startDestination = Destination.Today.route,
+            modifier = Modifier.padding(padding),
+        ) {
+            composable(Destination.Today.route) {
+                val viewModel: TodayViewModel = koinViewModel()
+                TodayScreen(
+                    viewModel = viewModel,
+                    onAddHabit = { navController.navigate(Destination.CreateHabit.route) },
+                    onAddTask = { navController.navigate(Destination.CreateTask.route) },
+                )
+            }
+            composable(Destination.Schedule.route) { ScheduleScreen() }
+            composable(Destination.Timer.route) { TimerScreen() }
+            composable(Destination.Reports.route) {
+                val viewModel: ReportsViewModel = koinViewModel()
+                ReportsScreen(viewModel = viewModel)
+            }
+            composable(Destination.Journal.route) {
+                val viewModel: JournalViewModel = koinViewModel()
+                JournalScreen(
+                    viewModel = viewModel,
+                    onAddEntry = { navController.navigate(Destination.NewJournalEntry.route) },
+                )
+            }
+            composable(Destination.NewJournalEntry.route) {
+                val viewModel: JournalViewModel = koinViewModel()
+                NewJournalEntryScreen(
+                    viewModel = viewModel,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CreateHabit.route) {
+                val viewModel: CreateEditHabitViewModel = koinViewModel()
+                CreateEditHabitScreen(
+                    viewModel = viewModel,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.CreateTask.route) {
+                val viewModel: CreateTaskViewModel = koinViewModel()
+                CreateTaskScreen(
+                    viewModel = viewModel,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+        }
+    }
+}
