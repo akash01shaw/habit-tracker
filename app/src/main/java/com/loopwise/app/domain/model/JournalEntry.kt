@@ -5,9 +5,14 @@ import java.time.Instant
 enum class JournalEntryType {
     TEXT,
     MOOD,
-    CHECKLIST; // Not yet creatable from the UI (spec Phase 3) — modeled now so the schema doesn't need a later migration.
+    CHECKLIST,
+    BULLET_LOG;
 
-    val wireValue: String get() = name.lowercase()
+    val wireValue: String
+        get() = when (this) {
+            BULLET_LOG -> "bullet_log"
+            else -> name.lowercase()
+        }
 
     companion object {
         fun fromWire(value: String): JournalEntryType =

@@ -18,10 +18,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.loopwise.app.domain.model.BulletKind
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
+import com.loopwise.app.domain.model.decodeBulletItems
 import com.loopwise.app.domain.model.decodeChecklistItems
+import com.loopwise.app.domain.model.symbol
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -34,6 +37,7 @@ fun JournalEntryCard(
     linkedHabit: Habit?,
     modifier: Modifier = Modifier,
     onToggleChecklistItem: (Int) -> Unit = {},
+    onToggleBulletItem: (Int) -> Unit = {},
 ) {
     Card(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -54,6 +58,32 @@ fun JournalEntryCard(
                                     item.text,
                                     style = MaterialTheme.typography.bodyLarge,
                                     textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                                )
+                            }
+                        }
+                    }
+                }
+                JournalEntryType.BULLET_LOG -> {
+                    val items = decodeBulletItems(entry.content)
+                    Column {
+                        items.forEachIndexed { index, item ->
+                            if (item.kind == BulletKind.TASK) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = item.done,
+                                        onCheckedChange = { onToggleBulletItem(index) },
+                                    )
+                                    Text(
+                                        item.text,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        textDecoration = if (item.done) TextDecoration.LineThrough else null,
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    "${item.kind.symbol} ${item.text}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(vertical = 8.dp),
                                 )
                             }
                         }

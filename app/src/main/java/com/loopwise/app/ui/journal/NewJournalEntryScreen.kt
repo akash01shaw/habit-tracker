@@ -35,8 +35,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.loopwise.app.domain.model.BulletKind
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.JournalEntryType
+import com.loopwise.app.domain.model.symbol
 
 @Composable
 fun NewJournalEntryScreen(viewModel: JournalViewModel, onDone: () -> Unit) {
@@ -67,6 +69,11 @@ fun NewJournalEntryScreen(viewModel: JournalViewModel, onDone: () -> Unit) {
                     selected = state.type == JournalEntryType.CHECKLIST,
                     onClick = { viewModel.onTypeChange(JournalEntryType.CHECKLIST) },
                     label = { Text("Checklist") },
+                )
+                FilterChip(
+                    selected = state.type == JournalEntryType.BULLET_LOG,
+                    onClick = { viewModel.onTypeChange(JournalEntryType.BULLET_LOG) },
+                    label = { Text("Bullet Log") },
                 )
             }
 
@@ -113,6 +120,47 @@ fun NewJournalEntryScreen(viewModel: JournalViewModel, onDone: () -> Unit) {
                             )
                             Button(
                                 onClick = viewModel::addChecklistItem,
+                                modifier = Modifier.padding(start = 8.dp),
+                            ) {
+                                Text("Add")
+                            }
+                        }
+                    }
+                }
+                JournalEntryType.BULLET_LOG -> {
+                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                        state.bulletItems.forEachIndexed { index, item ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    "${item.kind.symbol} ${item.text}",
+                                    modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+                                )
+                                IconButton(onClick = { viewModel.removeBulletItem(index) }) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Remove line")
+                                }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            BulletKind.entries.forEach { kind ->
+                                FilterChip(
+                                    selected = state.bulletDraftKind == kind,
+                                    onClick = { viewModel.onBulletDraftKindChange(kind) },
+                                    label = { Text("${kind.symbol} ${kind.name.lowercase()}") },
+                                )
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                            OutlinedTextField(
+                                value = state.bulletDraft,
+                                onValueChange = viewModel::onBulletDraftChange,
+                                label = { Text("Add line") },
+                                modifier = Modifier.weight(1f),
+                            )
+                            Button(
+                                onClick = viewModel::addBulletItem,
                                 modifier = Modifier.padding(start = 8.dp),
                             ) {
                                 Text("Add")

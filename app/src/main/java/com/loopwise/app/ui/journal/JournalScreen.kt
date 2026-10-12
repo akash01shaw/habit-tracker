@@ -88,6 +88,7 @@ fun JournalScreen(viewModel: JournalViewModel, onAddEntry: () -> Unit) {
                             entry = entry,
                             linkedHabit = entry.linkedHabitId?.let(habitsById::get),
                             onToggleChecklistItem = { index -> viewModel.toggleChecklistItem(entry, index) },
+                            onToggleBulletItem = { index -> viewModel.toggleBulletItem(entry, index) },
                         )
                     }
                 }
@@ -124,6 +125,7 @@ private fun TypeFilterDropdown(selectedType: JournalEntryType?, onSelect: (Journ
         JournalEntryType.TEXT -> "Text"
         JournalEntryType.MOOD -> "Mood"
         JournalEntryType.CHECKLIST -> "Checklist"
+        JournalEntryType.BULLET_LOG -> "Bullet Log"
     }
 
     Box {
@@ -135,6 +137,10 @@ private fun TypeFilterDropdown(selectedType: JournalEntryType?, onSelect: (Journ
             DropdownMenuItem(
                 text = { Text("Checklist") },
                 onClick = { onSelect(JournalEntryType.CHECKLIST); expanded = false },
+            )
+            DropdownMenuItem(
+                text = { Text("Bullet Log") },
+                onClick = { onSelect(JournalEntryType.BULLET_LOG); expanded = false },
             )
         }
     }

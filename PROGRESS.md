@@ -7,6 +7,60 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-12 (cont'd) — Built bullet-log journal entries
+
+**Objective:** Fourth item in the reprioritized list, and the last journal entry
+type from spec §2.4 ("free text, mood rating, checklist... bullet log").
+
+**Scoping decision:** modeled as the actual Bullet Journal rapid-log method
+(distinct from checklist, which is just checkable items) — each line has a kind:
+Task (•, togglable done/not-done), Event (○, static), or Note (–, static). This is
+the detail spec §2.4 left implicit ("bullet log" as a term of art) rather than
+spelling out, so it was worth getting right rather than just re-skinning the
+checklist type.
+
+**New, unlike checklist/CSV/habit-editing: needed a real schema change.**
+`journal_entries.type`'s check constraint (`'text','mood','checklist'`) was written
+before `bullet_log` existed as a value, so items are still JSON-in-`content` (no
+new column) but the type string itself needed a new allowed value at the database
+level. Added `supabase/migrations/0002_journal_bullet_log.sql` (drops and
+recreates the constraint to add `'bullet_log'`) — **this has NOT been run against
+the live Supabase project yet**, since there's no `supabase` CLI link in this
+environment (migrations have always been applied by hand via the SQL editor, per
+the original Milestone 1 setup). Until it's run: bullet-log entries save and work
+fully offline in Room (no DB-level constraint there), but `JournalRepository`'s
+push-to-Supabase call will fail against the live table's check constraint and the
+row will just stay marked unsynced (the existing offline-first `isSynced` /
+`syncPending()` retry path handles this safely — no crash, no data loss, it just
+won't reach the cloud until the migration is applied).
+
+**Built:**
+- `BulletKind` (TASK/EVENT/NOTE) + `BulletItem(text, kind, done)` +
+  `encodeBulletItems`/`decodeBulletItems` — same JSON-in-content pattern as
+  `ChecklistItem`.
+- `JournalEntryType.BULLET_LOG` (wire value `bullet_log`, since the enum's default
+  `name.lowercase()` wouldn't produce the underscore).
+- `NewJournalEntryScreen`: a "Bullet Log" type chip, a kind selector (3 chips show
+  the •/○/– symbols), add-line field, and a removable list of pending lines.
+- `JournalEntryCard`: Task lines render as a real toggleable `Checkbox` (same
+  interactive-in-the-feed pattern as checklist); Event/Note lines render as plain
+  symbol-prefixed text, since only tasks have a meaningful "done" state.
+- `JournalViewModel.toggleBulletItem()` — same decode/flip/re-encode/upsert shape
+  as `toggleChecklistItem`, with a guard that no-ops on non-TASK lines.
+- Added "Bullet Log" to the Journal screen's type filter dropdown.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` — green on the
+first attempt (no compile errors this time). Added 4 unit tests (round-trip
+through mixed kinds, null/malformed-JSON fallback, symbol uniqueness).
+
+**Still open / needs a user action:** run
+`supabase/migrations/0002_journal_bullet_log.sql` against the live Supabase
+project's SQL editor before bullet-log entries will sync to the cloud. Also still
+**NOT device-verified**, queued with Timer, Schedule, habit editing, CSV export,
+and checklist journal entries for the consolidated device-testing pass.
+
+---
+
 ## 2026-10-12 (cont'd) — Built checklist journal entries
 
 **Objective:** Third item in the reprioritized list — `JournalEntryType.CHECKLIST`

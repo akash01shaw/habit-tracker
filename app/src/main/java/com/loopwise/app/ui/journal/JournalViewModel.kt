@@ -7,11 +7,15 @@ import androidx.lifecycle.viewModelScope
 import com.loopwise.app.data.repository.AuthRepository
 import com.loopwise.app.data.repository.HabitRepository
 import com.loopwise.app.data.repository.JournalRepository
+import com.loopwise.app.domain.model.BulletItem
+import com.loopwise.app.domain.model.BulletKind
 import com.loopwise.app.domain.model.ChecklistItem
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
+import com.loopwise.app.domain.model.decodeBulletItems
 import com.loopwise.app.domain.model.decodeChecklistItems
+import com.loopwise.app.domain.model.encodeBulletItems
 import com.loopwise.app.domain.model.encodeChecklistItems
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,6 +43,9 @@ data class NewEntryFormState(
     val moodValue: Int = 50,
     val checklistItems: List<ChecklistItem> = emptyList(),
     val checklistDraft: String = "",
+    val bulletItems: List<BulletItem> = emptyList(),
+    val bulletDraft: String = "",
+    val bulletDraftKind: BulletKind = BulletKind.TASK,
     val linkedHabitId: String? = null,
     val isSaving: Boolean = false,
     val error: String? = null,
@@ -81,6 +88,15 @@ class JournalViewModel(
         if (index !in items.indices) return
         items[index] = items[index].copy(checked = !items[index].checked)
         val updated = entry.copy(content = encodeChecklistItems(items))
+        viewModelScope.launch { runCatching { journalRepository.upsertEntry(updated) } }
+    }
+
+    fun toggleBulletItem(entry: JournalEntry, index: Int) {
+        val items = decodeBulletItems(entry.content).toMutableList()
+        val item = items.getOrNull(index) ?: return
+        if (item.kind != BulletKind.TASK) return
+        items[index] = item.copy(done = !item.done)
+        val updated = entry.copy(content = encodeBulletItems(items))
         viewModelScope.launch { runCatching { journalRepository.upsertEntry(updated) } }
     }
 
@@ -127,6 +143,30 @@ class JournalViewModel(
         _formState.value = state.copy(checklistItems = state.checklistItems.filterIndexed { i, _ -> i != index })
     }
 
+    fun onBulletDraftChange(text: String) {
+        _formState.value = _formState.value.copy(bulletDraft = text, error = null)
+    }
+
+    fun onBulletDraftKindChange(kind: BulletKind) {
+        _formState.value = _formState.value.copy(bulletDraftKind = kind)
+    }
+
+    fun addBulletItem() {
+        val state = _formState.value
+        val text = state.bulletDraft.trim()
+        if (text.isEmpty()) return
+        _formState.value = state.copy(
+            bulletItems = state.bulletItems + BulletItem(text = text, kind = state.bulletDraftKind),
+            bulletDraft = "",
+        )
+    }
+
+    fun removeBulletItem(index: Int) {
+        val state = _formState.value
+        if (index !in state.bulletItems.indices) return
+        _formState.value = state.copy(bulletItems = state.bulletItems.filterIndexed { i, _ -> i != index })
+    }
+
     fun saveEntry() {
         val ownerId = authRepository.currentUserIdOrNull()
         val state = _formState.value
@@ -142,6 +182,10 @@ class JournalViewModel(
             _formState.value = state.copy(error = "Add at least one item.")
             return
         }
+        if (state.type == JournalEntryType.BULLET_LOG && state.bulletItems.isEmpty()) {
+            _formState.value = state.copy(error = "Add at least one line.")
+            return
+        }
 
         val entry = JournalEntry(
             id = UUID.randomUUID().toString(),
@@ -150,6 +194,7 @@ class JournalViewModel(
             type = state.type,
             content = when (state.type) {
                 JournalEntryType.CHECKLIST -> encodeChecklistItems(state.checklistItems)
+                JournalEntryType.BULLET_LOG -> encodeBulletItems(state.bulletItems)
                 else -> state.content.trim().ifBlank { null }
             },
             moodValue = if (state.type == JournalEntryType.MOOD) state.moodValue else null,
