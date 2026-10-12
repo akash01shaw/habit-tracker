@@ -41,6 +41,7 @@ fun TodayScreen(
     viewModel: TodayViewModel,
     onAddHabit: () -> Unit,
     onAddTask: () -> Unit,
+    onEditHabit: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
     var tasksExpanded by remember { mutableStateOf(true) }
@@ -116,6 +117,7 @@ fun TodayScreen(
                         HabitRow(
                             item = item,
                             onPrimaryAction = { onHabitPrimaryAction(viewModel, item) },
+                            onNameClick = { onEditHabit(item.habit.id) },
                         )
                     }
                 }
@@ -138,6 +140,7 @@ fun TodayScreen(
                         AvoidanceHabitRow(
                             item = item,
                             onReset = { viewModel.resetAvoidanceStreak(item) },
+                            onNameClick = { onEditHabit(item.habit.id) },
                         )
                     }
                 }

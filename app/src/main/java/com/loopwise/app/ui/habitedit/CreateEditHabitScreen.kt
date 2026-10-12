@@ -22,19 +22,27 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,21 +56,34 @@ import com.loopwise.app.ui.habitedit.components.ReminderPicker
 @Composable
 fun CreateEditHabitScreen(
     viewModel: CreateEditHabitViewModel,
+    habitId: String? = null,
     onDone: () -> Unit,
 ) {
     val state by viewModel.formState.collectAsState()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.saved) {
-        if (state.saved) onDone()
+    LaunchedEffect(habitId) {
+        if (habitId != null) viewModel.loadForEdit(habitId)
+    }
+
+    LaunchedEffect(state.saved, state.deleted) {
+        if (state.saved || state.deleted) onDone()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Habit") },
+                title = { Text(if (state.isEditing) "Edit Habit" else "New Habit") },
                 navigationIcon = {
                     IconButton(onClick = onDone) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (state.isEditing) {
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete habit")
+                        }
                     }
                 },
             )
@@ -175,12 +196,35 @@ fun CreateEditHabitScreen(
 
             Button(
                 onClick = viewModel::save,
-                enabled = !state.isSaving,
+                enabled = !state.isSaving && !state.isDeleting,
                 modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
             ) {
-                Text("Save Habit")
+                if (state.isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text(if (state.isEditing) "Save Changes" else "Save Habit")
+                }
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete \"${state.name}\"?") },
+            text = { Text("This removes the habit and its logged history. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    viewModel.delete()
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 

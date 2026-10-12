@@ -30,6 +30,8 @@ class HabitRepository(
     fun observeHabits(ownerId: String): Flow<List<Habit>> =
         habitDao.observeHabits(ownerId).map { list -> list.map { it.toDomain() } }
 
+    suspend fun getHabit(id: String): Habit? = habitDao.getById(id)?.toDomain()
+
     fun observeLogsForDate(userId: String, date: LocalDate): Flow<List<HabitLog>> =
         habitLogDao.observeLogsForDate(userId, date).map { list -> list.map { it.toDomain() } }
 

@@ -39,6 +39,7 @@ import com.loopwise.app.ui.today.HabitWithProgress
 fun HabitRow(
     item: HabitWithProgress,
     onPrimaryAction: () -> Unit,
+    onNameClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val habit = item.habit
@@ -58,6 +59,7 @@ fun HabitRow(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .background(color)
+                .clickable(onClick = onNameClick)
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             Text(

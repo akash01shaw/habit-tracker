@@ -1,5 +1,7 @@
 package com.loopwise.app.ui.habitedit
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loopwise.app.data.repository.AuthRepository
@@ -8,8 +10,6 @@ import com.loopwise.app.domain.model.Frequency
 import com.loopwise.app.domain.model.FrequencyKind
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitType
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import com.loopwise.app.notifications.ReminderScheduler
 import com.loopwise.app.ui.theme.BuildPalette
 import com.loopwise.app.ui.theme.QuitPalette
@@ -17,10 +17,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalTime
 import java.util.UUID
 
 data class CreateHabitFormState(
+    val habitId: String? = null,
+    val ownerId: String? = null,
+    val createdAt: Instant? = null,
+    val originalReminders: List<LocalTime> = emptyList(),
     val name: String = "",
     val type: HabitType = HabitType.BOOLEAN,
     val color: Long = BuildPalette.Blue.toArgbLong(),
@@ -30,10 +35,15 @@ data class CreateHabitFormState(
     val targetValue: String = "",
     val unit: String = "",
     val reminders: List<LocalTime> = emptyList(),
+    val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val isDeleting: Boolean = false,
     val error: String? = null,
     val saved: Boolean = false,
+    val deleted: Boolean = false,
 ) {
+    val isEditing: Boolean get() = habitId != null
+
     val availableColors: List<Long>
         get() = (if (type == HabitType.AVOIDANCE) QuitPalette.all else BuildPalette.all).map { it.toArgbLong() }
 
@@ -50,6 +60,37 @@ class CreateEditHabitViewModel(
 
     private val _formState = MutableStateFlow(CreateHabitFormState())
     val formState: StateFlow<CreateHabitFormState> = _formState.asStateFlow()
+
+    private var loadedHabitId: String? = null
+
+    /** Called once from the screen when opened in edit mode. A no-op if already loaded for this id. */
+    fun loadForEdit(habitId: String) {
+        if (loadedHabitId == habitId) return
+        loadedHabitId = habitId
+        _formState.value = _formState.value.copy(isLoading = true)
+        viewModelScope.launch {
+            val habit = habitRepository.getHabit(habitId)
+            if (habit == null) {
+                _formState.value = _formState.value.copy(isLoading = false, error = "Couldn't find this habit.")
+                return@launch
+            }
+            _formState.value = CreateHabitFormState(
+                habitId = habit.id,
+                ownerId = habit.ownerId,
+                createdAt = habit.createdAt,
+                originalReminders = habit.reminders,
+                name = habit.name,
+                type = habit.type,
+                color = habit.color,
+                frequencyKind = habit.frequency.kind,
+                selectedWeekdays = habit.frequency.days?.toSet() ?: emptySet(),
+                perPeriodCount = habit.frequency.count ?: 1,
+                targetValue = habit.targetValue?.let { if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString() } ?: "",
+                unit = habit.unit.orEmpty(),
+                reminders = habit.reminders,
+            )
+        }
+    }
 
     fun onNameChange(value: String) {
         _formState.value = _formState.value.copy(name = value, error = null)
@@ -99,7 +140,7 @@ class CreateEditHabitViewModel(
 
     fun save() {
         val state = _formState.value
-        val ownerId = authRepository.currentUserIdOrNull()
+        val ownerId = state.ownerId ?: authRepository.currentUserIdOrNull()
         if (ownerId == null) {
             _formState.value = state.copy(error = "You need to be signed in.")
             return
@@ -123,7 +164,7 @@ class CreateEditHabitViewModel(
         )
 
         val habit = Habit(
-            id = UUID.randomUUID().toString(),
+            id = state.habitId ?: UUID.randomUUID().toString(),
             ownerId = ownerId,
             name = state.name.trim(),
             color = state.color,
@@ -132,12 +173,17 @@ class CreateEditHabitViewModel(
             targetValue = target,
             unit = state.unit.trim().ifBlank { null },
             reminders = state.reminders,
+            createdAt = state.createdAt ?: Instant.now(),
         )
 
         _formState.value = state.copy(isSaving = true, error = null)
         viewModelScope.launch {
             runCatching { habitRepository.upsertHabit(habit) }
                 .onSuccess {
+                    // Original reminder times no longer present get cancelled rather than left
+                    // dangling as orphaned alarms; everything currently set gets (re)scheduled.
+                    state.originalReminders.filterNot { it in habit.reminders }
+                        .forEach { reminderScheduler.cancelHabitReminder(habit.id, it) }
                     habit.reminders.forEach { time ->
                         reminderScheduler.scheduleHabitReminder(habit.id, habit.name, time)
                     }
@@ -147,6 +193,25 @@ class CreateEditHabitViewModel(
                     _formState.value = _formState.value.copy(
                         isSaving = false,
                         error = it.message ?: "Couldn't save this habit.",
+                    )
+                }
+        }
+    }
+
+    fun delete() {
+        val state = _formState.value
+        val habitId = state.habitId ?: return
+        _formState.value = state.copy(isDeleting = true, error = null)
+        viewModelScope.launch {
+            runCatching { habitRepository.deleteHabit(habitId) }
+                .onSuccess {
+                    state.reminders.forEach { reminderScheduler.cancelHabitReminder(habitId, it) }
+                    _formState.value = _formState.value.copy(isDeleting = false, deleted = true)
+                }
+                .onFailure {
+                    _formState.value = _formState.value.copy(
+                        isDeleting = false,
+                        error = it.message ?: "Couldn't delete this habit.",
                     )
                 }
         }

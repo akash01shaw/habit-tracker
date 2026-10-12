@@ -7,6 +7,49 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-12 — Reprioritized roadmap; built habit editing
+
+**Objective:** User reviewed the "not yet implemented" list and chose to prioritize
+Google Sign-In, habit editing, CSV export, Health Connect sync, and checklist/
+bullet-log journal entries — explicitly **deprioritizing shared
+habits/accountability** (the single largest remaining chunk of the original spec,
+both the Phase 2 feature itself and the Phase 3 items that depend on it: group
+streaks, partner-nudge notifications).
+
+Before starting: answered the user's question about how Health Connect data
+fetching actually works (permission flow, `readRecords`/`aggregate` calls scoped to
+a time range, writing results into a habit's log the same way a manual tap would) —
+and flagged honestly that it's the one feature on the list that can't be verified
+without the device *and* real health data already flowing into it from somewhere.
+Agreed order: habit editing → CSV export → checklist journal → bullet-log journal →
+Google Sign-In → Health Connect (self-contained/no-new-dependency items first,
+items needing external setup or real external data last).
+
+**Built: habit editing** (closes the one remaining Phase 1 MVP gap):
+- `HabitRepository.getHabit(id)` — trivial wrapper, the DAO method already existed.
+- `CreateEditHabitViewModel` now supports a `loadForEdit(habitId)` path that
+  prefills the form from an existing habit (preserving its id/ownerId/createdAt so
+  saving is an update, not a new row) alongside the original create path. On save,
+  reminder times removed during editing are explicitly cancelled via
+  `ReminderScheduler.cancelHabitReminder` rather than left as orphaned alarms;
+  current reminders are (re)scheduled.
+- Added delete, with a confirmation dialog (per the "confirm before destructive
+  actions" standard) — cancels that habit's reminders too before removing it.
+- Entry point: tapping a habit's name pill on Today (both regular and
+  avoidance/quit rows) now opens it for editing, via the `EditHabit` nav route that
+  existed in `Destinations.kt` since Milestone 1-3 but was never wired to a screen.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` — green on the
+first attempt, lint unchanged at 0 errors/28 warnings. No new unit tests this
+round — the change is mostly CRUD wiring and navigation, not new branchy
+calculation logic.
+
+**Still NOT device-verified**: habit editing (built this session), Timer, Schedule.
+Queued together for one consolidated device-testing pass per the user's standing
+instruction.
+
+---
+
 ## 2026-10-11 (cont'd) — Built Schedule; the 5-tab IA is now fully implemented
 
 **Objective:** Build Schedule (spec §2.5) — the last placeholder tab. User asked to

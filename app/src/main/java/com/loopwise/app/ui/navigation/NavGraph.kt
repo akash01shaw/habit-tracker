@@ -6,9 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.loopwise.app.ui.auth.AuthViewModel
 import com.loopwise.app.ui.auth.SignInScreen
 import com.loopwise.app.ui.auth.SignUpScreen
@@ -75,6 +77,7 @@ private fun MainNavHost() {
                     viewModel = viewModel,
                     onAddHabit = { navController.navigate(Destination.CreateHabit.route) },
                     onAddTask = { navController.navigate(Destination.CreateTask.route) },
+                    onEditHabit = { habitId -> navController.navigate(Destination.EditHabit.createRoute(habitId)) },
                 )
             }
             composable(Destination.Schedule.route) {
@@ -107,6 +110,17 @@ private fun MainNavHost() {
                 val viewModel: CreateEditHabitViewModel = koinViewModel()
                 CreateEditHabitScreen(
                     viewModel = viewModel,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destination.EditHabit.route,
+                arguments = listOf(navArgument("habitId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val viewModel: CreateEditHabitViewModel = koinViewModel()
+                CreateEditHabitScreen(
+                    viewModel = viewModel,
+                    habitId = backStackEntry.arguments?.getString("habitId"),
                     onDone = { navController.popBackStack() },
                 )
             }

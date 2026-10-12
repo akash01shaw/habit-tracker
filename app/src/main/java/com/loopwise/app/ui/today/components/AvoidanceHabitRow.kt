@@ -41,6 +41,7 @@ import java.time.Instant
 fun AvoidanceHabitRow(
     item: AvoidanceHabitState,
     onReset: () -> Unit,
+    onNameClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val color = Color(item.habit.color)
@@ -60,6 +61,7 @@ fun AvoidanceHabitRow(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
                 .background(color)
+                .clickable(onClick = onNameClick)
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             Text(
