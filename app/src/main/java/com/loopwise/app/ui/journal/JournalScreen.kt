@@ -84,7 +84,11 @@ fun JournalScreen(viewModel: JournalViewModel, onAddEntry: () -> Unit) {
                 val habitsById = state.habits.associateBy { it.id }
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(state.entries, key = { it.id }) { entry ->
-                        JournalEntryCard(entry = entry, linkedHabit = entry.linkedHabitId?.let(habitsById::get))
+                        JournalEntryCard(
+                            entry = entry,
+                            linkedHabit = entry.linkedHabitId?.let(habitsById::get),
+                            onToggleChecklistItem = { index -> viewModel.toggleChecklistItem(entry, index) },
+                        )
                     }
                 }
             }
@@ -128,6 +132,10 @@ private fun TypeFilterDropdown(selectedType: JournalEntryType?, onSelect: (Journ
             DropdownMenuItem(text = { Text("All Entries") }, onClick = { onSelect(null); expanded = false })
             DropdownMenuItem(text = { Text("Text") }, onClick = { onSelect(JournalEntryType.TEXT); expanded = false })
             DropdownMenuItem(text = { Text("Mood") }, onClick = { onSelect(JournalEntryType.MOOD); expanded = false })
+            DropdownMenuItem(
+                text = { Text("Checklist") },
+                onClick = { onSelect(JournalEntryType.CHECKLIST); expanded = false },
+            )
         }
     }
 }

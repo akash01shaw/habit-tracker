@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.Habit
@@ -60,6 +63,11 @@ fun NewJournalEntryScreen(viewModel: JournalViewModel, onDone: () -> Unit) {
                     onClick = { viewModel.onTypeChange(JournalEntryType.MOOD) },
                     label = { Text("Mood") },
                 )
+                FilterChip(
+                    selected = state.type == JournalEntryType.CHECKLIST,
+                    onClick = { viewModel.onTypeChange(JournalEntryType.CHECKLIST) },
+                    label = { Text("Checklist") },
+                )
             }
 
             when (state.type) {
@@ -83,7 +91,35 @@ fun NewJournalEntryScreen(viewModel: JournalViewModel, onDone: () -> Unit) {
                         valueRange = 0f..100f,
                     )
                 }
-                JournalEntryType.CHECKLIST -> Unit
+                JournalEntryType.CHECKLIST -> {
+                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                        state.checklistItems.forEachIndexed { index, item ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(item.text, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
+                                IconButton(onClick = { viewModel.removeChecklistItem(index) }) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Remove item")
+                                }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = state.checklistDraft,
+                                onValueChange = viewModel::onChecklistDraftChange,
+                                label = { Text("Add item") },
+                                modifier = Modifier.weight(1f),
+                            )
+                            Button(
+                                onClick = viewModel::addChecklistItem,
+                                modifier = Modifier.padding(start = 8.dp),
+                            ) {
+                                Text("Add")
+                            }
+                        }
+                    }
+                }
             }
 
             Text(

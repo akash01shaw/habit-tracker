@@ -7,9 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.loopwise.app.data.repository.AuthRepository
 import com.loopwise.app.data.repository.HabitRepository
 import com.loopwise.app.data.repository.JournalRepository
+import com.loopwise.app.domain.model.ChecklistItem
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
+import com.loopwise.app.domain.model.decodeChecklistItems
+import com.loopwise.app.domain.model.encodeChecklistItems
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +37,8 @@ data class NewEntryFormState(
     val type: JournalEntryType = JournalEntryType.TEXT,
     val content: String = "",
     val moodValue: Int = 50,
+    val checklistItems: List<ChecklistItem> = emptyList(),
+    val checklistDraft: String = "",
     val linkedHabitId: String? = null,
     val isSaving: Boolean = false,
     val error: String? = null,
@@ -71,6 +76,14 @@ class JournalViewModel(
         filter.value = filter.value.copy(type = type)
     }
 
+    fun toggleChecklistItem(entry: JournalEntry, index: Int) {
+        val items = decodeChecklistItems(entry.content).toMutableList()
+        if (index !in items.indices) return
+        items[index] = items[index].copy(checked = !items[index].checked)
+        val updated = entry.copy(content = encodeChecklistItems(items))
+        viewModelScope.launch { runCatching { journalRepository.upsertEntry(updated) } }
+    }
+
     private val _formState = MutableStateFlow(NewEntryFormState())
     val formState: StateFlow<NewEntryFormState> = _formState.asStateFlow()
 
@@ -94,6 +107,26 @@ class JournalViewModel(
         _formState.value = _formState.value.copy(linkedHabitId = habitId)
     }
 
+    fun onChecklistDraftChange(text: String) {
+        _formState.value = _formState.value.copy(checklistDraft = text, error = null)
+    }
+
+    fun addChecklistItem() {
+        val state = _formState.value
+        val text = state.checklistDraft.trim()
+        if (text.isEmpty()) return
+        _formState.value = state.copy(
+            checklistItems = state.checklistItems + ChecklistItem(text = text),
+            checklistDraft = "",
+        )
+    }
+
+    fun removeChecklistItem(index: Int) {
+        val state = _formState.value
+        if (index !in state.checklistItems.indices) return
+        _formState.value = state.copy(checklistItems = state.checklistItems.filterIndexed { i, _ -> i != index })
+    }
+
     fun saveEntry() {
         val ownerId = authRepository.currentUserIdOrNull()
         val state = _formState.value
@@ -105,13 +138,20 @@ class JournalViewModel(
             _formState.value = state.copy(error = "Write something first.")
             return
         }
+        if (state.type == JournalEntryType.CHECKLIST && state.checklistItems.isEmpty()) {
+            _formState.value = state.copy(error = "Add at least one item.")
+            return
+        }
 
         val entry = JournalEntry(
             id = UUID.randomUUID().toString(),
             ownerId = ownerId,
             linkedHabitId = state.linkedHabitId,
             type = state.type,
-            content = state.content.trim().ifBlank { null },
+            content = when (state.type) {
+                JournalEntryType.CHECKLIST -> encodeChecklistItems(state.checklistItems)
+                else -> state.content.trim().ifBlank { null }
+            },
             moodValue = if (state.type == JournalEntryType.MOOD) state.moodValue else null,
         )
 

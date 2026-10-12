@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,10 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
+import com.loopwise.app.domain.model.decodeChecklistItems
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -26,12 +29,35 @@ private val dateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, h:mm a")
 
 /** Card style follows the reference screenshots: content up top, a metadata chip row below. */
 @Composable
-fun JournalEntryCard(entry: JournalEntry, linkedHabit: Habit?, modifier: Modifier = Modifier) {
+fun JournalEntryCard(
+    entry: JournalEntry,
+    linkedHabit: Habit?,
+    modifier: Modifier = Modifier,
+    onToggleChecklistItem: (Int) -> Unit = {},
+) {
     Card(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
             when (entry.type) {
                 JournalEntryType.MOOD -> {
                     Text(moodLabel(entry.moodValue), style = MaterialTheme.typography.bodyLarge)
+                }
+                JournalEntryType.CHECKLIST -> {
+                    val items = decodeChecklistItems(entry.content)
+                    Column {
+                        items.forEachIndexed { index, item ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = item.checked,
+                                    onCheckedChange = { onToggleChecklistItem(index) },
+                                )
+                                Text(
+                                    item.text,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                                )
+                            }
+                        }
+                    }
                 }
                 else -> {
                     Text(

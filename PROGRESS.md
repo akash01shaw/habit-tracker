@@ -7,6 +7,49 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-12 (cont'd) — Built checklist journal entries
+
+**Objective:** Third item in the reprioritized list — `JournalEntryType.CHECKLIST`
+already existed in the domain enum and the Supabase `journal_entries.type` check
+constraint already allowed `'checklist'` (modeled ahead of time to avoid a later
+migration); this session just built the UI and storage for it.
+
+**Scoping decision:** items are stored as JSON inside the existing `content` text
+column — same pattern `Frequency` and reminders already use for Room/Supabase. No
+new table, column, or migration needed. Went a step further than "create-only" and
+made checklist items interactively checkable from the Journal feed itself (tapping
+a checkbox toggles it and re-upserts the entry) — a checklist you can't check off
+later isn't materially different from a text entry, so this was worth the small
+extra scope.
+
+**Built:**
+- `ChecklistItem(text, checked)` + `encodeChecklistItems`/`decodeChecklistItems`:
+  pure, testable JSON helpers in `domain/model/ChecklistItem.kt`, decode falls back
+  to an empty list on malformed/unrelated JSON instead of throwing.
+- `NewJournalEntryScreen`: a "Checklist" type chip, an add-item text field + button,
+  and a removable list of pending items; `saveEntry()` now requires at least one
+  item for this type and JSON-encodes them into `content`.
+- `JournalEntryCard`: renders checklist items as real `Checkbox` rows (checked
+  items get a strikethrough) instead of the generic content-text fallback; each
+  checkbox calls back up to `JournalViewModel.toggleChecklistItem(entry, index)`,
+  which decodes, flips one item, re-encodes, and calls the existing
+  `JournalRepository.upsertEntry` (already upsert-by-id, so no repository changes
+  needed for the edit-in-place behavior).
+- Added the missing "Checklist" option to the Journal screen's type filter dropdown
+  (was already listed in the label `when`, just never offered as a selectable
+  filter).
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` — green (one
+real compile error caught and fixed: `Modifier.weight()` doesn't take a top-level
+import, it's a `RowScope`/`ColumnScope` member extension — removing the bad import
+fixed it). Added 4 unit tests for the encode/decode round-trip and the
+malformed/null/unrelated-JSON fallback paths. Lint unchanged at 0 errors.
+
+**Still NOT device-verified**: queued with Timer, Schedule, habit editing, and CSV
+export for the consolidated device-testing pass.
+
+---
+
 ## 2026-10-12 (cont'd) — Built CSV export
 
 **Objective:** Second item in the reprioritized list — spec §2.7's "Export button
