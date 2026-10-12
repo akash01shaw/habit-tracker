@@ -2,8 +2,10 @@
 
 package com.loopwise.app.ui.reports
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.loopwise.app.data.export.CsvFileWriter
 import com.loopwise.app.data.repository.AuthRepository
 import com.loopwise.app.data.repository.HabitRepository
 import com.loopwise.app.domain.model.HabitType
@@ -11,10 +13,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 enum class ReportSort { COMPLETION, STREAK }
@@ -29,6 +33,7 @@ data class ReportsUiState(
 class ReportsViewModel(
     private val authRepository: AuthRepository,
     private val habitRepository: HabitRepository,
+    private val csvFileWriter: CsvFileWriter,
 ) : ViewModel() {
 
     private val range = MutableStateFlow(ReportRange.WEEK)
@@ -66,11 +71,49 @@ class ReportsViewModel(
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportsUiState())
 
+    private val _isExporting = MutableStateFlow(false)
+    val isExporting: StateFlow<Boolean> = _isExporting
+
+    private val _exportError = MutableStateFlow<String?>(null)
+    val exportError: StateFlow<String?> = _exportError
+
+    /** One-shot: the screen reads this to launch the share sheet, then calls [consumeExportUri]. */
+    private val _exportUri = MutableStateFlow<Uri?>(null)
+    val exportUri: StateFlow<Uri?> = _exportUri
+
     fun selectRange(newRange: ReportRange) {
         range.value = newRange
     }
 
     fun selectSort(newSort: ReportSort) {
         sort.value = newSort
+    }
+
+    fun exportCsv() {
+        val userId = authRepository.currentUserIdOrNull()
+        if (userId == null) {
+            _exportError.value = "You need to be signed in to export."
+            return
+        }
+        _isExporting.value = true
+        _exportError.value = null
+        viewModelScope.launch {
+            runCatching {
+                val habits = habitRepository.observeHabits(userId).first()
+                val logs = habitRepository.getAllLogsForExport(userId)
+                val csv = buildHabitLogsCsv(habits, logs)
+                csvFileWriter.write(csv)
+            }.onSuccess { uri ->
+                _isExporting.value = false
+                _exportUri.value = uri
+            }.onFailure {
+                _isExporting.value = false
+                _exportError.value = it.message ?: "Couldn't export your data."
+            }
+        }
+    }
+
+    fun consumeExportUri() {
+        _exportUri.value = null
     }
 }

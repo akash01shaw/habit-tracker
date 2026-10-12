@@ -42,6 +42,10 @@ class HabitRepository(
     fun observeLogsInRange(habitId: String, userId: String, from: LocalDate, to: LocalDate): Flow<List<HabitLog>> =
         habitLogDao.observeLogsInRange(habitId, userId, from, to).map { list -> list.map { it.toDomain() } }
 
+    /** One-shot full log history for CSV export. */
+    suspend fun getAllLogsForExport(userId: String): List<HabitLog> =
+        habitLogDao.getAllForUser(userId).map { it.toDomain() }
+
     suspend fun upsertHabit(habit: Habit) {
         habitDao.upsert(habit.toEntity(isSynced = false))
         pushHabit(habit)

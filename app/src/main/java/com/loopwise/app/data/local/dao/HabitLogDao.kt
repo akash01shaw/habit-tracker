@@ -21,6 +21,10 @@ interface HabitLogDao {
     @Query("SELECT * FROM habit_logs WHERE isSynced = 0")
     suspend fun getUnsynced(): List<HabitLogEntity>
 
+    /** One-shot full history for CSV export — not reactive, this is a single user action. */
+    @Query("SELECT * FROM habit_logs WHERE userId = :userId ORDER BY date ASC, loggedAt ASC")
+    suspend fun getAllForUser(userId: String): List<HabitLogEntity>
+
     /**
      * The most recent log row per habit for this user — used as the "since" timestamp
      * for an avoidance habit's live streak clock (the latest log's loggedAt is the last

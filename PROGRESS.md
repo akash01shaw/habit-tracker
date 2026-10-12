@@ -7,6 +7,46 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-12 (cont'd) — Built CSV export
+
+**Objective:** Second item in the reprioritized list — spec §2.7's "Export button
+(CSV) for people who want to own their data."
+
+**Scoping decision:** exports the full raw habit-log history (one row per log:
+habit name, type, date, value, unit, completed, logged-at), not just the Reports
+screen's computed completion percentages — "own their data" reads as data
+portability, and a summary printout wouldn't give someone their actual history
+back if they wanted to leave.
+
+**Built:**
+- `buildHabitLogsCsv()`: pure function, proper CSV field escaping (quotes fields
+  containing commas/quotes/newlines, doubles embedded quotes) — kept standalone and
+  testable rather than inlined into the ViewModel, same pattern as the other
+  "math" files.
+- `CsvFileWriter`: writes the CSV to the app's cache dir and returns a
+  `FileProvider` content:// Uri. Needed a `<provider>` entry in the manifest and a
+  `file_paths.xml` resource — the one new piece of Android plumbing in this
+  feature, since sharing a file off-device requires a content Uri, not a raw file
+  path, on modern Android.
+- `ReportsViewModel.exportCsv()`: fetches all habits + all logs for the user
+  (one-shot, not reactive — this is a single user action), builds the CSV, writes
+  it, and exposes the resulting Uri once for the screen to launch a
+  `ACTION_SEND` share-sheet intent.
+- UI: a download icon in the Reports top bar, with a loading spinner while
+  exporting and an inline error message if it fails.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` — green on the
+first attempt. Added 7 unit tests for the CSV builder (43 total project-wide),
+including the escaping edge cases (commas, quotes, a log whose habit was since
+deleted) that are exactly the kind of thing worth testing explicitly rather than
+trusting by inspection. Lint unchanged at 0 errors/28 warnings.
+
+**Still NOT device-verified**: the share-sheet flow itself (does the CSV actually
+open/attach correctly in another app) — queued with Timer, Schedule, and habit
+editing for the consolidated device-testing pass.
+
+---
+
 ## 2026-10-12 — Reprioritized roadmap; built habit editing
 
 **Objective:** User reviewed the "not yet implemented" list and chose to prioritize
