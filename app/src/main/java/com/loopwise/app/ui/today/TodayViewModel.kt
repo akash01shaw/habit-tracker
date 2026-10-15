@@ -108,6 +108,10 @@ class TodayViewModel(
         }
     }
 
+    fun signOut() {
+        viewModelScope.launch { authRepository.signOut() }
+    }
+
     fun toggleTask(task: Task) {
         viewModelScope.launch { taskRepository.setCompleted(task, !task.isCompleted) }
     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircleOutline
@@ -17,6 +18,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -50,7 +52,16 @@ fun TodayScreen(
     var fabMenuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Today") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Today") },
+                actions = {
+                    IconButton(onClick = viewModel::signOut) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             Box {
                 FloatingActionButton(onClick = { fabMenuExpanded = true }) {

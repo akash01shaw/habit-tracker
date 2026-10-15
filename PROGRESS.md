@@ -7,6 +7,64 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-15 (cont'd) — Finished the consolidated device-testing pass; added sign-out
+
+**Objective:** Finish verifying every feature built since the GitHub publish
+(Schedule, CSV export, checklist/bullet-log journal, Google Sign-In) that had only
+ever been compile/lint/unit-test checked.
+
+**Schedule**: both Agenda and Grid views render correctly — Agenda lists
+reminder-based blocks per day, Grid aligns colored blocks to the right
+day-column/hour-row. Tap-to-navigate on a block remains a known, documented gap
+(not fixed this pass).
+
+**CSV export**: full share-sheet flow works — tapped the download icon, got a
+real Android share sheet with the generated `loopwise-export-*.csv` recognized as
+a spreadsheet file. Pulled the file directly via `adb run-as` and confirmed the
+content is correct (header + row, full-precision value as intended for a raw data
+export).
+
+**Checklist journal entries**: created a 2-item checklist ("Chapter 1", "Chapter
+2"), saved, confirmed it renders as real checkboxes in the feed, and confirmed
+tapping a checkbox toggles + persists (strikethrough applied, state survived).
+
+**Bullet-log journal entries**: created one Task line and one Event line, saved,
+confirmed Task renders as a toggleable checkbox and Event renders as static
+symbol-prefixed text (only Task lines are meant to be interactive) — toggled the
+task line and confirmed it persisted.
+
+**Found a real gap while trying to test Google Sign-In: no way to sign out.**
+`AuthRepository.signOut()` existed but was never wired to any UI control anywhere
+in the app — there was no settings screen, no profile menu, nothing. This silently
+blocked testing Google Sign-In (can't reach the sign-in screen once logged in
+without uninstalling). **Fix:** added a sign-out `IconButton` to the Today
+screen's top bar (`TodayViewModel.signOut()` → `authRepository.signOut()`) — the
+simplest correct place for it given there's no dedicated settings screen yet.
+
+**Google Sign-In: verified fully end-to-end twice.** Tapped "Continue with
+Google" → system Credential Manager "Sign in with Google" sheet appeared →
+selected the registered test account (akash01shaw@gmail.com) → one-time Google
+consent screen → landed signed-in on Today (correctly empty, since this Google
+account maps to a brand-new Supabase user distinct from the email/password
+account used throughout testing — not a bug). Signed out and signed back in with
+Google a second time to confirm repeatability: no re-consent needed, instant
+sign-in straight to Today. This closes out the last unverified piece of the
+Google Sign-In OAuth setup from earlier this session.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green after the
+sign-out addition (one deprecation warning self-caught and fixed: used
+`Icons.AutoMirrored.Filled.Logout` instead of the deprecated `Icons.Filled.Logout`).
+
+**Still open**: `JournalRepository.refreshFromRemote()` still exists but nothing
+calls it — journal entries don't pull from Supabase on launch the way
+habits/tasks now do (noted in the crash-fix entry above). Not blocking, since
+Room is the source of truth for a signed-in session and nothing was lost, but
+worth closing for consistency. Also: a real settings/profile screen would be a
+better long-term home for sign-out than a bare top-bar icon, but that's a larger
+scope than this pass.
+
+---
+
 ## 2026-10-15 (cont'd) — Verified Timer, fixed a progress-display formatting bug
 
 **Objective:** Continuing the device-testing pass after the crash fix. Tested
