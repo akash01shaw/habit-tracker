@@ -7,6 +7,57 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-15 (cont'd) — Product audit against spec; fixed five motivation/UX gaps
+
+**Objective:** User asked for a step back — are the originally-intended spec
+features all there, is the app actually meaningful for productivity/discipline,
+and what's worth improving? Audited the built app against
+`habit-tracker-app-spec.md` section by section and gave an honest readout: the
+four habit engines, auth, Timer→habit feed, Reports heatmap, and Journal are all
+solid; the biggest motivational miss was that streak data (already computed for
+Reports) was never surfaced on the Today screen itself, where it's seen daily.
+User picked five items from that audit to fix in this pass.
+
+**1. Streak badge on Today habit rows.** New `computeCurrentStreak()` (pure,
+tested) in `ui/today/HabitStreak.kt` — counts consecutive scheduled days ending
+today with no miss, same logic family as `HabitReportMath`'s but standalone so
+Today doesn't need the Reports range machinery. Needed a new DAO query
+(`observeLogsInRangeForUser`) to pull all habits' logs for the lookback window in
+one shot rather than N per-habit flows. `HabitRow` now shows a 🔥-and-count badge
+next to the name pill once `streak > 0`.
+
+**2. Completion micro-animation.** `HabitActionControl`'s checkmark now does a
+one-shot scale pulse (1 → 1.35 → 1, spring-damped) the moment a habit flips from
+not-done to done — tracked via a `previousDone` guard so it doesn't replay on
+every recomposition or fire on initial load of an already-completed habit.
+
+**3. Journal date-range filter.** Added `JournalDateRange` (All time / Last 7
+days / Last 30 days) to `JournalFilterState`; filtering happens client-side on
+`createdAt` after the existing habit/type DB query, same pattern as the other two
+filters. Spec asked for a real date-range picker; went with presets instead to
+match the existing dropdown-filter UI rather than introducing a different control
+type for one filter.
+
+**4. Schedule block tap.** `ScheduleScreen` now takes `onEditHabit`/`onViewTask`
+callbacks, wired in `NavGraph.kt`. A HABIT block jumps to that habit's Edit
+screen (same destination as Today's name-pill tap). A TASK block jumps to the
+Today tab — tasks don't have their own edit screen yet, so this is the closest
+honest match to spec's "jump into edit" rather than a dead tap. Full task editing
+remains a known gap.
+
+**5. Wired `JournalRepository.refreshFromRemote()`.** Added the same
+init-block-collects-currentUser pattern `TodayViewModel` already uses, plus
+`syncPending()` for parity — journal entries now actually sync from Supabase on
+launch instead of only reflecting whatever was upserted locally.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green (5 new
+`HabitStreakTest` cases), reinstalled on the Galaxy S23 Ultra, confirmed all five
+on-device: streak badge appeared on first completion, checkmark pulse fires,
+"Last 7 days" filter correctly kept a same-day entry, tapping a Schedule block
+landed on the right habit's Edit screen.
+
+---
+
 ## 2026-10-15 (cont'd) — Finished the consolidated device-testing pass; added sign-out
 
 **Objective:** Finish verifying every feature built since the GitHub publish

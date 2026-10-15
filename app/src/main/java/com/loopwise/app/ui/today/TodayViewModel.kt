@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 
-data class HabitWithProgress(val habit: Habit, val log: HabitLog?) {
+data class HabitWithProgress(val habit: Habit, val log: HabitLog?, val streak: Int = 0) {
     val currentValue: Double get() = log?.value ?: 0.0
     val isDone: Boolean get() = log?.isDone ?: false
 }
@@ -65,20 +65,29 @@ class TodayViewModel(
         if (user == null) {
             flowOf(TodayUiState(isSignedIn = false))
         } else {
+            val today = LocalDate.now()
             combine(
                 habitRepository.observeHabits(user.id),
                 habitRepository.observeLogsForDate(user.id, date),
                 taskRepository.observeTasksForDate(user.id, date),
                 habitRepository.observeLatestLogPerHabit(user.id),
-            ) { habits, logs, tasks, latestLogs ->
+                habitRepository.observeLogsInRangeForUser(user.id, today.minusDays(400), today),
+            ) { habits, logs, tasks, latestLogs, recentLogs ->
                 val logsByHabit = logs.associateBy { it.habitId }
                 val latestLogByHabit = latestLogs.associateBy { it.habitId }
+                val recentLogsByHabit = recentLogs.groupBy { it.habitId }
                 TodayUiState(
                     selectedDate = date,
                     tasks = tasks,
                     habits = habits
                         .filter { it.type != HabitType.AVOIDANCE && it.isScheduledOn(date) }
-                        .map { habit -> HabitWithProgress(habit, logsByHabit[habit.id]) },
+                        .map { habit ->
+                            HabitWithProgress(
+                                habit = habit,
+                                log = logsByHabit[habit.id],
+                                streak = computeCurrentStreak(habit, recentLogsByHabit[habit.id].orEmpty(), today),
+                            )
+                        },
                     avoidanceHabits = habits
                         .filter { it.type == HabitType.AVOIDANCE }
                         .map { habit ->

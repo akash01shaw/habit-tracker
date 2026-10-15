@@ -20,19 +20,30 @@ import com.loopwise.app.ui.schedule.components.ScheduleHeader
 import com.loopwise.app.ui.schedule.components.WeekGrid
 
 /**
- * Tapping a block doesn't navigate anywhere yet (spec §2.5 wants "jump into edit or
- * start its timer") — that needs either a shared cross-tab ViewModel or a nav
- * argument to pass the target habit/date, deliberately left for a follow-up rather
- * than wiring something half-working without a chance to test it this round.
+ * Tapping a HABIT block jumps into that habit's edit screen (the same destination
+ * Today's name-pill tap uses). Tapping a TASK block jumps to the Today tab — tasks
+ * don't have their own edit screen yet, so landing where the task is actually
+ * logged/completed is the closest match to spec §2.5's "jump into edit" for now.
  */
 @Composable
-fun ScheduleScreen(viewModel: ScheduleViewModel) {
+fun ScheduleScreen(
+    viewModel: ScheduleViewModel,
+    onEditHabit: (String) -> Unit,
+    onViewTask: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(topBar = { TopAppBar(title = { Text("Schedule") }) }) { padding ->
         if (!state.isSignedIn) {
             ComingSoonBody(padding, "Sign in to see your schedule.")
             return@Scaffold
+        }
+
+        val onBlockClick: (ScheduleBlock) -> Unit = { block ->
+            when (block.kind) {
+                ScheduleBlockKind.HABIT -> onEditHabit(block.sourceId)
+                ScheduleBlockKind.TASK -> onViewTask()
+            }
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -55,8 +66,8 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
             }
 
             when (state.viewMode) {
-                ScheduleViewMode.AGENDA -> AgendaView(state.weekDates, state.blocks, onBlockClick = {})
-                ScheduleViewMode.GRID -> WeekGrid(state.weekDates, state.blocks, onBlockClick = {})
+                ScheduleViewMode.AGENDA -> AgendaView(state.weekDates, state.blocks, onBlockClick = onBlockClick)
+                ScheduleViewMode.GRID -> WeekGrid(state.weekDates, state.blocks, onBlockClick = onBlockClick)
             }
         }
     }

@@ -15,6 +15,10 @@ interface HabitLogDao {
     @Query("SELECT * FROM habit_logs WHERE habitId = :habitId AND userId = :userId AND date BETWEEN :from AND :to")
     fun observeLogsInRange(habitId: String, userId: String, from: LocalDate, to: LocalDate): Flow<List<HabitLogEntity>>
 
+    /** Same range query but across every habit — used to compute each habit's current streak in one shot. */
+    @Query("SELECT * FROM habit_logs WHERE userId = :userId AND date BETWEEN :from AND :to")
+    fun observeLogsInRangeForUser(userId: String, from: LocalDate, to: LocalDate): Flow<List<HabitLogEntity>>
+
     @Query("SELECT * FROM habit_logs WHERE habitId = :habitId AND userId = :userId AND date = :date LIMIT 1")
     suspend fun getLog(habitId: String, userId: String, date: LocalDate): HabitLogEntity?
 

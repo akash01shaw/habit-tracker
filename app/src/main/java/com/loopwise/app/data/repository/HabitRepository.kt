@@ -42,6 +42,10 @@ class HabitRepository(
     fun observeLogsInRange(habitId: String, userId: String, from: LocalDate, to: LocalDate): Flow<List<HabitLog>> =
         habitLogDao.observeLogsInRange(habitId, userId, from, to).map { list -> list.map { it.toDomain() } }
 
+    /** Across every habit — feeds the Today screen's per-habit streak badges. */
+    fun observeLogsInRangeForUser(userId: String, from: LocalDate, to: LocalDate): Flow<List<HabitLog>> =
+        habitLogDao.observeLogsInRangeForUser(userId, from, to).map { list -> list.map { it.toDomain() } }
+
     /** One-shot full log history for CSV export. */
     suspend fun getAllLogsForExport(userId: String): List<HabitLog> =
         habitLogDao.getAllForUser(userId).map { it.toDomain() }

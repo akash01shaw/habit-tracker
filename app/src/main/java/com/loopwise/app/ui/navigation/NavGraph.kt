@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -82,7 +83,17 @@ private fun MainNavHost() {
             }
             composable(Destination.Schedule.route) {
                 val viewModel: ScheduleViewModel = koinViewModel()
-                ScheduleScreen(viewModel = viewModel)
+                ScheduleScreen(
+                    viewModel = viewModel,
+                    onEditHabit = { habitId -> navController.navigate(Destination.EditHabit.createRoute(habitId)) },
+                    onViewTask = {
+                        navController.navigate(Destination.Today.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
             }
             composable(Destination.Timer.route) {
                 val viewModel: TimerViewModel = koinViewModel()

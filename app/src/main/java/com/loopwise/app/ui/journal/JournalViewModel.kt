@@ -26,9 +26,21 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
-data class JournalFilterState(val habitId: String? = null, val type: JournalEntryType? = null)
+enum class JournalDateRange(val label: String, val days: Long?) {
+    ALL_TIME("All time", null),
+    LAST_7_DAYS("Last 7 days", 7),
+    LAST_30_DAYS("Last 30 days", 30),
+}
+
+data class JournalFilterState(
+    val habitId: String? = null,
+    val type: JournalEntryType? = null,
+    val dateRange: JournalDateRange = JournalDateRange.ALL_TIME,
+)
 
 data class JournalUiState(
     val entries: List<JournalEntry> = emptyList(),
@@ -59,6 +71,21 @@ class JournalViewModel(
 ) : ViewModel() {
 
     private val filter = MutableStateFlow(JournalFilterState())
+    private var hasRefreshedForUser: String? = null
+
+    init {
+        viewModelScope.launch {
+            authRepository.currentUser.collect { user ->
+                if (user != null && hasRefreshedForUser != user.id) {
+                    hasRefreshedForUser = user.id
+                    runCatching {
+                        journalRepository.refreshFromRemote(user.id)
+                        journalRepository.syncPending()
+                    }
+                }
+            }
+        }
+    }
 
     val uiState: StateFlow<JournalUiState> =
         combine(authRepository.currentUser, filter) { user, f -> user to f }
@@ -70,7 +97,14 @@ class JournalViewModel(
                         journalRepository.observeEntries(user.id, f.habitId, f.type),
                         habitRepository.observeHabits(user.id),
                     ) { entries, habits ->
-                        JournalUiState(entries = entries, habits = habits, filter = f, isSignedIn = true)
+                        val cutoffDays = f.dateRange.days
+                        val filteredEntries = if (cutoffDays == null) {
+                            entries
+                        } else {
+                            val cutoff = Instant.now().minus(cutoffDays, ChronoUnit.DAYS)
+                            entries.filter { !it.createdAt.isBefore(cutoff) }
+                        }
+                        JournalUiState(entries = filteredEntries, habits = habits, filter = f, isSignedIn = true)
                     }
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), JournalUiState())
@@ -81,6 +115,10 @@ class JournalViewModel(
 
     fun setTypeFilter(type: JournalEntryType?) {
         filter.value = filter.value.copy(type = type)
+    }
+
+    fun setDateRangeFilter(range: JournalDateRange) {
+        filter.value = filter.value.copy(dateRange = range)
     }
 
     fun toggleChecklistItem(entry: JournalEntry, index: Int) {
