@@ -7,6 +7,47 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-15 — Set up Google Sign-In (external OAuth config)
+
+**Objective:** Fifth item in the reprioritized list. The app-side code
+(`GoogleSignInHelper.kt`'s Credential Manager flow, `AuthRepository.signInWithGoogleIdToken`,
+the "Continue with Google" button on `SignInScreen`) was already built in an earlier
+session — all that was missing was the real OAuth credentials, which only the user
+could create since it needs their Google account. This session was entirely external
+setup, walked through step by step rather than written as code.
+
+**Done, in order:**
+1. Created a new Google Cloud project ("Loopwise") and ran through the Google Auth
+   Platform / OAuth consent screen wizard (External user type, app name + contact
+   email).
+2. Created a **Web application** OAuth client ("Loopwise Web") — its Client ID is
+   what the app uses as `GOOGLE_WEB_CLIENT_ID` / `GetGoogleIdOption.setServerClientId`;
+   its Client Secret goes only into Supabase (never into the app or this repo).
+3. Enabled the Google provider in Supabase (Authentication → Providers → Google),
+   pasting the Web client's Client ID + Client Secret.
+4. Created an **Android** OAuth client, package `com.loopwise.app`, registered
+   against the debug keystore's SHA-1 fingerprint — required for Credential
+   Manager to trust the app's signature; this client's own ID isn't used in code.
+5. Added the test Google account under Audience → Test users — required because
+   the consent screen is still in **Testing** publishing status (not yet
+   verified/published), so sign-in would otherwise fail with "access blocked" for
+   any account not explicitly listed. **Known limit**: capped at 100 test users,
+   and a production launch would need the consent screen published (and possibly
+   Google's app verification, depending on scopes) — not needed for personal/dev
+   use, flagged here for later if this ever ships more broadly.
+6. Replaced the placeholder in `local.properties` with the real Web Client ID
+   (gitignored, never touches the repo).
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` — green, same as
+every other feature this session (this one had no new app code, so no new tests).
+
+**Still NOT device-verified**: the actual sign-in flow (Credential Manager sheet →
+Google account picker → Supabase session) — queued with Timer, Schedule, habit
+editing, CSV export, and checklist/bullet-log journal entries for the consolidated
+device-testing pass.
+
+---
+
 ## 2026-10-12 (cont'd) — Built bullet-log journal entries
 
 **Objective:** Fourth item in the reprioritized list, and the last journal entry
