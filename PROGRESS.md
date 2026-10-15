@@ -24,15 +24,10 @@ checklist type.
 before `bullet_log` existed as a value, so items are still JSON-in-`content` (no
 new column) but the type string itself needed a new allowed value at the database
 level. Added `supabase/migrations/0002_journal_bullet_log.sql` (drops and
-recreates the constraint to add `'bullet_log'`) — **this has NOT been run against
-the live Supabase project yet**, since there's no `supabase` CLI link in this
-environment (migrations have always been applied by hand via the SQL editor, per
-the original Milestone 1 setup). Until it's run: bullet-log entries save and work
-fully offline in Room (no DB-level constraint there), but `JournalRepository`'s
-push-to-Supabase call will fail against the live table's check constraint and the
-row will just stay marked unsynced (the existing offline-first `isSynced` /
-`syncPending()` retry path handles this safely — no crash, no data loss, it just
-won't reach the cloud until the migration is applied).
+recreates the constraint to add `'bullet_log'`) and walked the user through
+applying it by hand via the Supabase SQL editor (no `supabase` CLI link in this
+environment, same as the original Milestone 1 setup) — confirmed applied on
+2026-10-15 (`pg_get_constraintdef` now shows `bullet_log` in the allowed list).
 
 **Built:**
 - `BulletKind` (TASK/EVENT/NOTE) + `BulletItem(text, kind, done)` +
@@ -53,11 +48,8 @@ won't reach the cloud until the migration is applied).
 first attempt (no compile errors this time). Added 4 unit tests (round-trip
 through mixed kinds, null/malformed-JSON fallback, symbol uniqueness).
 
-**Still open / needs a user action:** run
-`supabase/migrations/0002_journal_bullet_log.sql` against the live Supabase
-project's SQL editor before bullet-log entries will sync to the cloud. Also still
-**NOT device-verified**, queued with Timer, Schedule, habit editing, CSV export,
-and checklist journal entries for the consolidated device-testing pass.
+**Still NOT device-verified**: queued with Timer, Schedule, habit editing, CSV
+export, and checklist journal entries for the consolidated device-testing pass.
 
 ---
 
