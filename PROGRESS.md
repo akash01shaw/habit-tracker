@@ -7,6 +7,48 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-15 (cont'd) — Started the consolidated device-testing pass; fixed a crash-on-launch bug
+
+**Objective:** Run the pass that's been queued since Timer/Schedule — every feature
+built since the GitHub publish (Timer, Schedule, habit editing, CSV export,
+checklist/bullet-log journal, Google Sign-In) had only been compile/lint/unit-test
+verified, never actually run.
+
+**Found and fixed a real crash on first launch:** `LoopwiseDatabase`'s
+`@Database(version = 1, ...)` was never bumped despite `TimerSessionEntity` (and the
+schema changes since) landing after the on-device database was first created.
+Because the version number stayed the same, Room never triggers its
+upgrade/destructive-migration path at all (`fallbackToDestructiveMigration` in
+`AppModule` never got a chance to run) — it just tried to open the stale on-disk
+file and failed Room's schema identity check in `onOpen()`, which is a fatal
+exception, not a caught error: `IllegalStateException: Room cannot verify the data
+integrity... forgot to update the version number`. Confirmed via `adb logcat -b
+crash`. **Fix:** bumped `version` to 2 in `LoopwiseDatabase.kt`, which lets the
+already-configured destructive-migration fallback actually fire.
+
+**Found and fixed a related gap while investigating:** `TodayViewModel` never
+refreshed from Supabase on cold start — `refresh()` was only wired to
+`selectDate()`, so after the Room cache gets wiped by the migration above (or on
+any fresh install), the Today screen would show empty until the user manually
+tapped a date chip, which would have looked like a second bug during testing.
+Added an `init` block that calls `refresh()` once per signed-in user as soon as
+`authRepository.currentUser` first emits a non-null value.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green, reinstalled
+on the Galaxy S23 Ultra over wireless debugging, relaunched — Today screen now
+loads cleanly and correctly re-synced the existing Drink Water (counter) and Quit
+Smoking (avoidance) habits from Supabase automatically, no manual refresh needed.
+`adb logcat -b crash` clean on relaunch.
+
+**Still open**: `JournalRepository.refreshFromRemote()` exists but nothing calls it
+(unlike habits/tasks) — journal entries only populate Room from whatever was
+upserted locally, not pulled from Supabase on launch. Not fixed yet since it wasn't
+blocking this pass (no journal data was lost — journal entries created today are
+still local-only and never left this device to begin with). Flagging as a
+pre-existing gap to close alongside the rest of the testing pass.
+
+---
+
 ## 2026-10-15 — Set up Google Sign-In (external OAuth config)
 
 **Objective:** Fifth item in the reprioritized list. The app-side code

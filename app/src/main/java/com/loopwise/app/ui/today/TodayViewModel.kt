@@ -46,6 +46,18 @@ class TodayViewModel(
 ) : ViewModel() {
 
     private val selectedDate = MutableStateFlow(LocalDate.now())
+    private var hasRefreshedForUser: String? = null
+
+    init {
+        viewModelScope.launch {
+            authRepository.currentUser.collect { user ->
+                if (user != null && hasRefreshedForUser != user.id) {
+                    hasRefreshedForUser = user.id
+                    refresh()
+                }
+            }
+        }
+    }
 
     val uiState: StateFlow<TodayUiState> = combine(authRepository.currentUser, selectedDate) { user, date ->
         user to date
