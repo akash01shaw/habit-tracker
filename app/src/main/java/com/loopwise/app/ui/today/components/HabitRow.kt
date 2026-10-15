@@ -128,4 +128,4 @@ private fun progressLabel(item: HabitWithProgress): String {
 }
 
 private fun formatNumber(value: Double): String =
-    if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
+    if (value == value.toLong().toDouble()) value.toLong().toString() else "%.1f".format(value)

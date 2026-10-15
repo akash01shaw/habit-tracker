@@ -7,6 +7,39 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-15 (cont'd) — Verified Timer, fixed a progress-display formatting bug
+
+**Objective:** Continuing the device-testing pass after the crash fix. Tested
+Timer end-to-end: Stopwatch start/pause/stop, Focus habit picker, and the
+Timer→habit feed path (`feedLinkedHabit()`), which hadn't been exercised on a
+device before.
+
+**Created a Duration-type habit on-device for the first time** ("Study", target 30
+min) — the three other habit types (Boolean, Counter, Avoidance) were covered in
+the original device-testing round, but Duration never was. Form, color picker, and
+save all worked correctly.
+
+**Found and fixed a real display bug**: linked the Timer's Focus to "Study", ran a
+~74-second stopwatch session, stopped it, and the Today screen showed `Study
+1.3666666666666667 / 30 min` — raw `Double` precision leaking straight into the
+UI. Root cause in `HabitRow.kt`'s `progressLabel()`: its local `formatNumber()`
+helper only special-cased whole numbers (`value.toLong()`) and fell through to the
+Double's raw `.toString()` for anything fractional. **Fix:** fractional values now
+format via `"%.1f".format(value)`, giving `1.4 / 30 min`. Checked
+`CsvExport.kt`'s `formatCsvNumber()`, which has the identical pattern — left it
+alone, since raw precision in a data export (vs. a UI label) is arguably the
+correct behavior for someone exporting "their data," not the same bug.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green,
+reinstalled, confirmed on-device — Study now reads `1.4 / 30 min` after a timer
+session. Stopwatch start/pause/stop/reset all behaved correctly; Focus picker
+correctly disables while a session is running.
+
+**Still in progress**: continuing through the rest of the consolidated
+device-testing checklist (Schedule, CSV export, journal entries, Google Sign-In).
+
+---
+
 ## 2026-10-15 (cont'd) — Started the consolidated device-testing pass; fixed a crash-on-launch bug
 
 **Objective:** Run the pass that's been queued since Timer/Schedule — every feature
