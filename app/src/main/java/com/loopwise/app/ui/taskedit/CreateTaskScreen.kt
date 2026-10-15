@@ -8,19 +8,24 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -47,22 +52,38 @@ private val dateFormatter = DateTimeFormatter.ofPattern("MMM d, yyyy")
 private val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 
 @Composable
-fun CreateTaskScreen(viewModel: CreateTaskViewModel, onDone: () -> Unit) {
+fun CreateTaskScreen(
+    viewModel: CreateTaskViewModel,
+    taskId: String? = null,
+    onDone: () -> Unit,
+) {
     val state by viewModel.formState.collectAsState()
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.saved) {
-        if (state.saved) onDone()
+    LaunchedEffect(taskId) {
+        if (taskId != null) viewModel.loadForEdit(taskId)
+    }
+
+    LaunchedEffect(state.saved, state.deleted) {
+        if (state.saved || state.deleted) onDone()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Task") },
+                title = { Text(if (state.isEditing) "Edit Task" else "New Task") },
                 navigationIcon = {
                     IconButton(onClick = onDone) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (state.isEditing) {
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete task")
+                        }
                     }
                 },
             )
@@ -137,12 +158,35 @@ fun CreateTaskScreen(viewModel: CreateTaskViewModel, onDone: () -> Unit) {
 
             Button(
                 onClick = viewModel::save,
-                enabled = !state.isSaving,
+                enabled = !state.isSaving && !state.isDeleting,
                 modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
             ) {
-                Text("Save Task")
+                if (state.isSaving) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text(if (state.isEditing) "Save Changes" else "Save Task")
+                }
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete \"${state.title}\"?") },
+            text = { Text("This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    viewModel.delete()
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            },
+        )
     }
 
     if (showDatePicker) {

@@ -10,22 +10,32 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
 
 data class CreateTaskFormState(
+    val taskId: String? = null,
+    val ownerId: String? = null,
+    val createdAt: Instant? = null,
+    val completedAt: Instant? = null,
+    val originalReminderTime: Instant? = null,
     val title: String = "",
     val dueDate: LocalDate = LocalDate.now(),
     val dueTime: LocalTime? = null,
     val priorityFlag: Boolean = false,
     val note: String = "",
     val reminderEnabled: Boolean = false,
+    val isLoading: Boolean = false,
     val isSaving: Boolean = false,
+    val isDeleting: Boolean = false,
     val error: String? = null,
     val saved: Boolean = false,
+    val deleted: Boolean = false,
 ) {
+    val isEditing: Boolean get() = taskId != null
     val canEnableReminder: Boolean get() = dueTime != null
 }
 
@@ -37,6 +47,35 @@ class CreateTaskViewModel(
 
     private val _formState = MutableStateFlow(CreateTaskFormState())
     val formState: StateFlow<CreateTaskFormState> = _formState.asStateFlow()
+
+    private var loadedTaskId: String? = null
+
+    /** Called once from the screen when opened in edit mode. A no-op if already loaded for this id. */
+    fun loadForEdit(taskId: String) {
+        if (loadedTaskId == taskId) return
+        loadedTaskId = taskId
+        _formState.value = _formState.value.copy(isLoading = true)
+        viewModelScope.launch {
+            val task = taskRepository.getTask(taskId)
+            if (task == null) {
+                _formState.value = _formState.value.copy(isLoading = false, error = "Couldn't find this task.")
+                return@launch
+            }
+            _formState.value = CreateTaskFormState(
+                taskId = task.id,
+                ownerId = task.ownerId,
+                createdAt = task.createdAt,
+                completedAt = task.completedAt,
+                originalReminderTime = task.reminderTime,
+                title = task.title,
+                dueDate = task.dueDate ?: LocalDate.now(),
+                dueTime = task.dueTime,
+                priorityFlag = task.priorityFlag,
+                note = task.note.orEmpty(),
+                reminderEnabled = task.reminderTime != null,
+            )
+        }
+    }
 
     fun onTitleChange(value: String) {
         _formState.value = _formState.value.copy(title = value, error = null)
@@ -66,7 +105,7 @@ class CreateTaskViewModel(
 
     fun save() {
         val state = _formState.value
-        val ownerId = authRepository.currentUserIdOrNull()
+        val ownerId = state.ownerId ?: authRepository.currentUserIdOrNull()
         if (ownerId == null) {
             _formState.value = state.copy(error = "You need to be signed in.")
             return
@@ -83,7 +122,7 @@ class CreateTaskViewModel(
         }
 
         val task = Task(
-            id = UUID.randomUUID().toString(),
+            id = state.taskId ?: UUID.randomUUID().toString(),
             ownerId = ownerId,
             title = state.title.trim(),
             dueDate = state.dueDate,
@@ -91,19 +130,46 @@ class CreateTaskViewModel(
             priorityFlag = state.priorityFlag,
             note = state.note.trim().ifBlank { null },
             reminderTime = reminderTime,
+            completedAt = state.completedAt,
+            createdAt = state.createdAt ?: Instant.now(),
         )
 
         _formState.value = state.copy(isSaving = true, error = null)
         viewModelScope.launch {
             runCatching { taskRepository.upsertTask(task) }
                 .onSuccess {
-                    reminderTime?.let { reminderScheduler.scheduleTaskReminder(task.id, task.title, it) }
+                    // A reschedule overwrites the existing alarm for this task id automatically;
+                    // only an explicit cancel is needed when the reminder was removed outright.
+                    if (reminderTime != null) {
+                        reminderScheduler.scheduleTaskReminder(task.id, task.title, reminderTime)
+                    } else if (state.originalReminderTime != null) {
+                        reminderScheduler.cancelTaskReminder(task.id)
+                    }
                     _formState.value = _formState.value.copy(isSaving = false, saved = true)
                 }
                 .onFailure {
                     _formState.value = _formState.value.copy(
                         isSaving = false,
                         error = it.message ?: "Couldn't save this task.",
+                    )
+                }
+        }
+    }
+
+    fun delete() {
+        val state = _formState.value
+        val taskId = state.taskId ?: return
+        _formState.value = state.copy(isDeleting = true, error = null)
+        viewModelScope.launch {
+            runCatching { taskRepository.deleteTask(taskId) }
+                .onSuccess {
+                    if (state.originalReminderTime != null) reminderScheduler.cancelTaskReminder(taskId)
+                    _formState.value = _formState.value.copy(isDeleting = false, deleted = true)
+                }
+                .onFailure {
+                    _formState.value = _formState.value.copy(
+                        isDeleting = false,
+                        error = it.message ?: "Couldn't delete this task.",
                     )
                 }
         }

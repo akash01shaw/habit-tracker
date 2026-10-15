@@ -19,17 +19,12 @@ import com.loopwise.app.ui.schedule.components.AgendaView
 import com.loopwise.app.ui.schedule.components.ScheduleHeader
 import com.loopwise.app.ui.schedule.components.WeekGrid
 
-/**
- * Tapping a HABIT block jumps into that habit's edit screen (the same destination
- * Today's name-pill tap uses). Tapping a TASK block jumps to the Today tab — tasks
- * don't have their own edit screen yet, so landing where the task is actually
- * logged/completed is the closest match to spec §2.5's "jump into edit" for now.
- */
+/** Tapping a block jumps into that habit's or task's edit screen (spec §2.5). */
 @Composable
 fun ScheduleScreen(
     viewModel: ScheduleViewModel,
     onEditHabit: (String) -> Unit,
-    onViewTask: () -> Unit,
+    onEditTask: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -42,7 +37,7 @@ fun ScheduleScreen(
         val onBlockClick: (ScheduleBlock) -> Unit = { block ->
             when (block.kind) {
                 ScheduleBlockKind.HABIT -> onEditHabit(block.sourceId)
-                ScheduleBlockKind.TASK -> onViewTask()
+                ScheduleBlockKind.TASK -> onEditTask(block.sourceId)
             }
         }
 

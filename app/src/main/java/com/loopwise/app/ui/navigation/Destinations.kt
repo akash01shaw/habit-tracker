@@ -23,6 +23,9 @@ sealed class Destination(val route: String) {
         fun createRoute(habitId: String) = "habit/$habitId"
     }
     data object CreateTask : Destination("task/new")
+    data object EditTask : Destination("task/{taskId}") {
+        fun createRoute(taskId: String) = "task/$taskId"
+    }
 
     data object NewJournalEntry : Destination("journal/new")
 }

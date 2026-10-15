@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -79,6 +78,7 @@ private fun MainNavHost() {
                     onAddHabit = { navController.navigate(Destination.CreateHabit.route) },
                     onAddTask = { navController.navigate(Destination.CreateTask.route) },
                     onEditHabit = { habitId -> navController.navigate(Destination.EditHabit.createRoute(habitId)) },
+                    onEditTask = { taskId -> navController.navigate(Destination.EditTask.createRoute(taskId)) },
                 )
             }
             composable(Destination.Schedule.route) {
@@ -86,13 +86,7 @@ private fun MainNavHost() {
                 ScheduleScreen(
                     viewModel = viewModel,
                     onEditHabit = { habitId -> navController.navigate(Destination.EditHabit.createRoute(habitId)) },
-                    onViewTask = {
-                        navController.navigate(Destination.Today.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onEditTask = { taskId -> navController.navigate(Destination.EditTask.createRoute(taskId)) },
                 )
             }
             composable(Destination.Timer.route) {
@@ -139,6 +133,17 @@ private fun MainNavHost() {
                 val viewModel: CreateTaskViewModel = koinViewModel()
                 CreateTaskScreen(
                     viewModel = viewModel,
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = Destination.EditTask.route,
+                arguments = listOf(navArgument("taskId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val viewModel: CreateTaskViewModel = koinViewModel()
+                CreateTaskScreen(
+                    viewModel = viewModel,
+                    taskId = backStackEntry.arguments?.getString("taskId"),
                     onDone = { navController.popBackStack() },
                 )
             }

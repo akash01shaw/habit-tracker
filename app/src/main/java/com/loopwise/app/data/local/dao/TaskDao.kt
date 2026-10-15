@@ -13,6 +13,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE ownerId = :ownerId AND dueDate = :date AND isDeleted = 0 ORDER BY dueTime ASC")
     fun observeTasksForDate(ownerId: String, date: LocalDate): Flow<List<TaskEntity>>
 
+    @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): TaskEntity?
+
     /** Used to re-arm AlarmManager reminders after a reboot (alarms don't survive one). */
     @Query("SELECT * FROM tasks WHERE ownerId = :ownerId AND isDeleted = 0 AND reminderTime IS NOT NULL AND reminderTime > :after")
     suspend fun getUpcomingReminders(ownerId: String, after: Instant): List<TaskEntity>

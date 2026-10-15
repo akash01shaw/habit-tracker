@@ -1,5 +1,6 @@
 package com.loopwise.app.ui.today.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +27,7 @@ import java.time.format.DateTimeFormatter
 private val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 
 @Composable
-fun TaskRow(task: Task, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+fun TaskRow(task: Task, onToggle: () -> Unit, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -34,7 +35,10 @@ fun TaskRow(task: Task, onToggle: () -> Unit, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f).clickable(onClick = onClick),
+        ) {
             if (task.priorityFlag) {
                 Icon(
                     Icons.Filled.Flag,

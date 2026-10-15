@@ -44,6 +44,7 @@ fun TodayScreen(
     onAddHabit: () -> Unit,
     onAddTask: () -> Unit,
     onEditHabit: (String) -> Unit,
+    onEditTask: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
     var tasksExpanded by remember { mutableStateOf(true) }
@@ -106,7 +107,11 @@ fun TodayScreen(
                     item { EmptyRow("No tasks for this day") }
                 } else {
                     items(state.tasks, key = { it.id }) { task ->
-                        TaskRow(task = task, onToggle = { viewModel.toggleTask(task) })
+                        TaskRow(
+                            task = task,
+                            onToggle = { viewModel.toggleTask(task) },
+                            onClick = { onEditTask(task.id) },
+                        )
                     }
                 }
             }

@@ -21,6 +21,8 @@ class TaskRepository(
     fun observeTasksForDate(ownerId: String, date: LocalDate): Flow<List<Task>> =
         taskDao.observeTasksForDate(ownerId, date).map { list -> list.map { it.toDomain() } }
 
+    suspend fun getTask(id: String): Task? = taskDao.getById(id)?.toDomain()
+
     suspend fun getUpcomingReminders(ownerId: String): List<Task> =
         taskDao.getUpcomingReminders(ownerId, Instant.now()).map { it.toDomain() }
 

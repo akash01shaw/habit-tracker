@@ -7,6 +7,42 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-15 (cont'd) — Built task editing
+
+**Objective:** Closes a real gap flagged in the previous audit: tasks could be
+created and toggled complete, but never edited or deleted once saved — a typo in
+a title had no fix. Mirrors the habit-edit pattern already established in
+`CreateEditHabitViewModel`/`Screen`.
+
+**Built:**
+- `TaskDao.getById()` + `TaskRepository.getTask()` — same shape as the habit
+  equivalent.
+- `CreateTaskViewModel.loadForEdit(taskId)`: loads the task, pre-fills the form,
+  preserves `id`/`ownerId`/`createdAt`/`completedAt` across the edit (completion
+  status isn't touched by this form — that stays a Today-row toggle). `save()`
+  now diffs the reminder: a time change just reschedules (same request-code
+  overwrites the old alarm), but removing the reminder entirely needs an
+  explicit `cancelTaskReminder` call since nothing would overwrite it otherwise.
+  Added `delete()`.
+- `CreateTaskScreen`: takes an optional `taskId`, dynamic "Edit Task"/"New Task"
+  title, a delete icon + confirm dialog (only in edit mode) — same shape as
+  `CreateEditHabitScreen`.
+- `Destination.EditTask` route, wired in `NavGraph.kt`.
+- `TaskRow` gained an `onClick` (tapping the title/row opens edit, separate from
+  the existing checkbox toggle) wired from `TodayScreen`.
+- **Bonus close-out**: Schedule's TASK block tap, which a few commits ago routed
+  to the Today tab as a stand-in ("tasks don't have an edit screen yet"), now
+  routes to the real Edit Task screen — the same honest fix HABIT blocks already
+  got.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green (one
+real compile error self-caught: missing `import java.time.Instant` in
+`CreateTaskViewModel.kt`). Confirmed on-device: created "Buy groceries", tapped
+its row, landed on Edit Task pre-filled with the title, delete icon present,
+"Save Changes" button — full loop works.
+
+---
+
 ## 2026-10-15 (cont'd) — Product audit against spec; fixed five motivation/UX gaps
 
 **Objective:** User asked for a step back — are the originally-intended spec
