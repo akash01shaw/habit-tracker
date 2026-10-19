@@ -7,6 +7,19 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-20 (cont'd) — Verified long-press menu + Skip/Unskip on-device
+
+Picked back up after a multi-day gap; wireless debugging needed a full re-pair
+(toggling it off/on gave a fresh port, the old pairing had gone stale — not a
+code issue). Directly exercised what the previous entry only verified via code
+review: long-pressed the "Push-ups" name pill → the Edit/Skip today/Delete menu
+appeared correctly. Tapped "Skip today" → row updated to show "Skipped" with the
+muted dash-circle action control, exactly as designed. Tapped the action control
+again → correctly un-skipped back to "1/1 time", not-done. Long-press quick
+actions and Skip are now confirmed working end-to-end, not just unit-tested.
+
+---
+
 ## 2026-10-20 (cont'd) — Built long-press quick actions + Skip; found and fixed a real data-loss bug
 
 **Objective:** Second half of the audit follow-through: long-press quick actions on
