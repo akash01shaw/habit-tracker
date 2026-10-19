@@ -51,6 +51,9 @@ interface HabitLogDao {
     @Upsert
     suspend fun upsert(log: HabitLogEntity)
 
+    @Upsert
+    suspend fun upsertAll(logs: List<HabitLogEntity>)
+
     @Query("UPDATE habit_logs SET isSynced = 1 WHERE id = :id")
     suspend fun markSynced(id: String)
 }

@@ -14,6 +14,7 @@ data class HabitLogDto(
     val date: String,
     val value: Double = 0.0,
     @SerialName("is_done") val isDone: Boolean = false,
+    @SerialName("is_skipped") val isSkipped: Boolean = false,
     val note: String? = null,
     @SerialName("logged_at") val loggedAt: String? = null,
 )
@@ -25,6 +26,7 @@ fun HabitLogDto.toDomain() = HabitLog(
     date = LocalDate.parse(date),
     value = value,
     isDone = isDone,
+    isSkipped = isSkipped,
     note = note,
     loggedAt = loggedAt?.let(Instant::parse) ?: Instant.now(),
 )
@@ -36,6 +38,7 @@ fun HabitLog.toDto() = HabitLogDto(
     date = date.toString(),
     value = value,
     isDone = isDone,
+    isSkipped = isSkipped,
     note = note,
     loggedAt = loggedAt.toString(),
 )

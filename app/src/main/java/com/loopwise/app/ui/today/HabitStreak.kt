@@ -21,7 +21,12 @@ fun computeCurrentStreak(
     var date = today
     repeat(lookbackDays) {
         if (habit.isScheduledOn(date)) {
-            if (isLogComplete(habit, logsByDate[date])) streak++ else return streak
+            val log = logsByDate[date]
+            when {
+                log?.isSkipped == true -> Unit // explicitly skipped — neither counts nor breaks the streak
+                isLogComplete(habit, log) -> streak++
+                else -> return streak
+            }
         }
         date = date.minusDays(1)
     }

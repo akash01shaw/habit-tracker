@@ -10,6 +10,8 @@ data class HabitLog(
     val date: LocalDate,
     val value: Double = 0.0,
     val isDone: Boolean = false,
+    /** Logged as "skip this day" from Today's long-press menu — doesn't break a streak or count against completion%, unlike an ordinary miss. */
+    val isSkipped: Boolean = false,
     val note: String? = null,
     val loggedAt: Instant = Instant.now(),
 )

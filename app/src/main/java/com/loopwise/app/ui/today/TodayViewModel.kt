@@ -11,6 +11,7 @@ import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitLog
 import com.loopwise.app.domain.model.HabitType
 import com.loopwise.app.domain.model.Task
+import com.loopwise.app.notifications.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,7 @@ import java.time.LocalDate
 data class HabitWithProgress(val habit: Habit, val log: HabitLog?, val streak: Int = 0) {
     val currentValue: Double get() = log?.value ?: 0.0
     val isDone: Boolean get() = log?.isDone ?: false
+    val isSkipped: Boolean get() = log?.isSkipped ?: false
 }
 
 /** [since] is the last reset/slip time — the streak clock counts up from here. */
@@ -43,6 +45,7 @@ class TodayViewModel(
     private val authRepository: AuthRepository,
     private val habitRepository: HabitRepository,
     private val taskRepository: TaskRepository,
+    private val reminderScheduler: ReminderScheduler,
 ) : ViewModel() {
 
     private val selectedDate = MutableStateFlow(LocalDate.now())
@@ -156,6 +159,49 @@ class TodayViewModel(
 
     fun logDurationMinutes(item: HabitWithProgress, minutes: Double) {
         incrementCounterHabit(item, minutes)
+    }
+
+    /** Skip today without it counting as a miss — doesn't break the streak or count against completion%. */
+    fun skipHabit(item: HabitWithProgress) {
+        val userId = authRepository.currentUserIdOrNull() ?: return
+        viewModelScope.launch {
+            habitRepository.logProgress(
+                habitId = item.habit.id,
+                userId = userId,
+                date = uiState.value.selectedDate,
+                value = item.currentValue,
+                isDone = false,
+                isSkipped = true,
+            )
+        }
+    }
+
+    fun unskipHabit(item: HabitWithProgress) {
+        val userId = authRepository.currentUserIdOrNull() ?: return
+        viewModelScope.launch {
+            habitRepository.logProgress(
+                habitId = item.habit.id,
+                userId = userId,
+                date = uiState.value.selectedDate,
+                value = item.currentValue,
+                isDone = false,
+                isSkipped = false,
+            )
+        }
+    }
+
+    fun deleteHabit(habit: Habit) {
+        viewModelScope.launch {
+            habitRepository.deleteHabit(habit.id)
+            habit.reminders.forEach { reminderScheduler.cancelHabitReminder(habit.id, it) }
+        }
+    }
+
+    fun deleteTask(task: Task) {
+        viewModelScope.launch {
+            taskRepository.deleteTask(task.id)
+            if (task.reminderTime != null) reminderScheduler.cancelTaskReminder(task.id)
+        }
     }
 
     /** "I slipped" — resets the streak clock and logs the relapse timestamp (spec §2.3). */

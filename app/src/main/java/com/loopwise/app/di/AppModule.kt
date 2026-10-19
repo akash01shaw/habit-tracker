@@ -44,7 +44,7 @@ val appModule = module {
     single { CsvFileWriter(get()) }
 
     viewModel { AuthViewModel(get()) }
-    viewModel { TodayViewModel(get(), get(), get()) }
+    viewModel { TodayViewModel(get(), get(), get(), get()) }
     viewModel { CreateEditHabitViewModel(get(), get(), get()) }
     viewModel { ReportsViewModel(get(), get(), get()) }
     viewModel { JournalViewModel(get(), get(), get()) }

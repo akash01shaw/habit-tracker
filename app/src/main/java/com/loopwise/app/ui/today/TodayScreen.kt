@@ -14,14 +14,17 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ChecklistRtl
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,12 +34,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitType
+import com.loopwise.app.domain.model.Task
 import com.loopwise.app.ui.today.components.AvoidanceHabitRow
 import com.loopwise.app.ui.today.components.DateStrip
 import com.loopwise.app.ui.today.components.HabitRow
 import com.loopwise.app.ui.today.components.SectionHeader
 import com.loopwise.app.ui.today.components.TaskRow
+
+private sealed class PendingDelete {
+    data class HabitDelete(val habit: Habit) : PendingDelete()
+    data class TaskDelete(val task: Task) : PendingDelete()
+}
 
 @Composable
 fun TodayScreen(
@@ -51,6 +61,7 @@ fun TodayScreen(
     var habitsExpanded by remember { mutableStateOf(true) }
     var avoidanceExpanded by remember { mutableStateOf(true) }
     var fabMenuExpanded by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<PendingDelete?>(null) }
 
     Scaffold(
         topBar = {
@@ -111,6 +122,7 @@ fun TodayScreen(
                             task = task,
                             onToggle = { viewModel.toggleTask(task) },
                             onClick = { onEditTask(task.id) },
+                            onDelete = { pendingDelete = PendingDelete.TaskDelete(task) },
                         )
                     }
                 }
@@ -134,6 +146,9 @@ fun TodayScreen(
                             item = item,
                             onPrimaryAction = { onHabitPrimaryAction(viewModel, item) },
                             onNameClick = { onEditHabit(item.habit.id) },
+                            onSkip = { viewModel.skipHabit(item) },
+                            onUnskip = { viewModel.unskipHabit(item) },
+                            onDelete = { pendingDelete = PendingDelete.HabitDelete(item.habit) },
                         )
                     }
                 }
@@ -157,11 +172,32 @@ fun TodayScreen(
                             item = item,
                             onReset = { viewModel.resetAvoidanceStreak(item) },
                             onNameClick = { onEditHabit(item.habit.id) },
+                            onDelete = { pendingDelete = PendingDelete.HabitDelete(item.habit) },
                         )
                     }
                 }
             }
         }
+    }
+
+    pendingDelete?.let { pending ->
+        val (title, onConfirm) = when (pending) {
+            is PendingDelete.HabitDelete -> "Delete \"${pending.habit.name}\"?" to { viewModel.deleteHabit(pending.habit) }
+            is PendingDelete.TaskDelete -> "Delete \"${pending.task.title}\"?" to { viewModel.deleteTask(pending.task) }
+        }
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(title) },
+            text = { Text("This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = { onConfirm(); pendingDelete = null }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+            },
+        )
     }
 }
 

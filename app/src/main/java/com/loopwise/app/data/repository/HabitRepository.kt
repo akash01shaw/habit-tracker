@@ -5,6 +5,7 @@ import com.loopwise.app.data.local.dao.HabitLogDao
 import com.loopwise.app.data.local.entities.toDomain
 import com.loopwise.app.data.local.entities.toEntity
 import com.loopwise.app.data.remote.dto.HabitDto
+import com.loopwise.app.data.remote.dto.HabitLogDto
 import com.loopwise.app.data.remote.dto.toDomain
 import com.loopwise.app.data.remote.dto.toDto
 import com.loopwise.app.domain.model.Habit
@@ -63,7 +64,14 @@ class HabitRepository(
     }
 
     /** Increments/sets today's progress for a habit and pushes the resulting log row. */
-    suspend fun logProgress(habitId: String, userId: String, date: LocalDate, value: Double, isDone: Boolean) {
+    suspend fun logProgress(
+        habitId: String,
+        userId: String,
+        date: LocalDate,
+        value: Double,
+        isDone: Boolean,
+        isSkipped: Boolean = false,
+    ) {
         val existing = habitLogDao.getLog(habitId, userId, date)
         val log = HabitLog(
             id = existing?.id ?: UUID.randomUUID().toString(),
@@ -72,6 +80,7 @@ class HabitRepository(
             date = date,
             value = value,
             isDone = isDone,
+            isSkipped = isSkipped,
         )
         habitLogDao.upsert(log.toEntity(isSynced = false))
         pushLog(log)
@@ -83,6 +92,16 @@ class HabitRepository(
                 .select { filter { eq("owner_id", ownerId) } }
                 .decodeList<HabitDto>()
             habitDao.upsertAll(remote.map { it.toDomain().toEntity(isSynced = true) })
+        }
+        // Logs only ever got pushed up, never pulled down — a wiped/reinstalled local
+        // Room cache silently lost all logged history even though it was safe in
+        // Supabase the whole time. Pulling the full history is the same one-shot
+        // shape getAllLogsForExport already uses for CSV export.
+        runCatching {
+            val remoteLogs = client.postgrest.from("habit_logs")
+                .select { filter { eq("user_id", ownerId) } }
+                .decodeList<HabitLogDto>()
+            habitLogDao.upsertAll(remoteLogs.map { it.toDomain().toEntity(isSynced = true) })
         }
     }
 

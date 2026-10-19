@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.loopwise.app.ui.today.components
 
 import androidx.compose.animation.core.Animatable
@@ -7,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -18,8 +21,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,16 +55,21 @@ import com.loopwise.app.ui.today.HabitWithProgress
  * outlined "+" for counters, outlined sync icon for health-synced habits, and once the
  * day's target is met, the control morphs into a solid filled checkmark in the habit's
  * color with a small celebratory pulse (replaces a plain strikethrough completion cue).
+ * Long-pressing the name/streak area opens a quick-action menu (spec §2.1).
  */
 @Composable
 fun HabitRow(
     item: HabitWithProgress,
     onPrimaryAction: () -> Unit,
     onNameClick: () -> Unit,
+    onSkip: () -> Unit,
+    onUnskip: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val habit = item.habit
     val color = Color(habit.color)
+    var showMenu by remember { mutableStateOf(false) }
 
     Row(
         modifier = modifier
@@ -68,23 +81,46 @@ fun HabitRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(color)
-                    .clickable(onClick = onNameClick)
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.combinedClickable(onClick = onNameClick, onLongClick = { showMenu = true }),
             ) {
-                Text(
-                    habit.name,
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(color)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        habit.name,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                if (item.streak > 0) {
+                    StreakBadge(streak = item.streak, color = color)
+                }
             }
-            if (item.streak > 0) {
-                StreakBadge(streak = item.streak, color = color)
+
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text("Edit") },
+                    leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                    onClick = { showMenu = false; onNameClick() },
+                )
+                DropdownMenuItem(
+                    text = { Text(if (item.isSkipped) "Unskip today" else "Skip today") },
+                    leadingIcon = { Icon(Icons.Filled.RemoveCircleOutline, contentDescription = null) },
+                    onClick = { showMenu = false; if (item.isSkipped) onUnskip() else onSkip() },
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete") },
+                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                    onClick = { showMenu = false; onDelete() },
+                )
             }
         }
 
@@ -95,7 +131,11 @@ fun HabitRow(
             modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
         )
 
-        HabitActionControl(item = item, color = color, onClick = onPrimaryAction)
+        HabitActionControl(
+            item = item,
+            color = color,
+            onClick = if (item.isSkipped) onUnskip else onPrimaryAction,
+        )
     }
 }
 
@@ -123,6 +163,7 @@ private fun StreakBadge(streak: Int, color: Color) {
 @Composable
 private fun HabitActionControl(item: HabitWithProgress, color: Color, onClick: () -> Unit) {
     val isDone = item.isDone
+    val isSkipped = item.isSkipped
     val isSynced = item.habit.healthSyncSource != null
 
     val scale = remember { Animatable(1f) }
@@ -141,19 +182,27 @@ private fun HabitActionControl(item: HabitWithProgress, color: Color, onClick: (
             .size(36.dp)
             .clip(CircleShape)
             .then(
-                if (isDone) Modifier.background(color)
-                else Modifier.border(1.5.dp, color, CircleShape),
+                when {
+                    isDone -> Modifier.background(color)
+                    isSkipped -> Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                    else -> Modifier.border(1.5.dp, color, CircleShape)
+                },
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         val icon = when {
             isDone -> Icons.Filled.Check
+            isSkipped -> Icons.Filled.RemoveCircleOutline
             isSynced -> Icons.Filled.Sync
             item.habit.type == HabitType.BOOLEAN -> null
             else -> Icons.Filled.Add
         }
-        val tint = if (isDone) Color.White else color
+        val tint = when {
+            isDone -> Color.White
+            isSkipped -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> color
+        }
         if (icon != null) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
         }
@@ -161,6 +210,7 @@ private fun HabitActionControl(item: HabitWithProgress, color: Color, onClick: (
 }
 
 private fun progressLabel(item: HabitWithProgress): String {
+    if (item.isSkipped) return "Skipped"
     val habit = item.habit
     val unit = habit.unit.orEmpty()
     return when (habit.type) {

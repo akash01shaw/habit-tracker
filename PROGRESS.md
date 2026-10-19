@@ -7,6 +7,67 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-20 (cont'd) — Built long-press quick actions + Skip; found and fixed a real data-loss bug
+
+**Objective:** Second half of the audit follow-through: long-press quick actions on
+Today rows (spec §2.1 — "Long-press a row to reorder or reveal quick actions (edit,
+skip, delete)"). Reorder explicitly scoped out — it needs a persisted sort-order
+field and drag gesture handling, a meaningfully separate feature; flagged as a
+known remaining gap rather than half-built.
+
+**Built: Skip.** A real domain concept, not just a UI affordance — skipping a day
+needed to mean something to the streak/completion math, not just hide the row.
+Added `HabitLog.isSkipped` (new Room column, DB version bumped to 3, new Supabase
+migration `0003_habit_log_skipped.sql`, same pattern as the bullet-log migration).
+A skipped day is **transparent**: `computeCurrentStreak()` and
+`HabitReportMath.buildHabitReport()` both now skip over it without breaking a
+streak or counting against completion% — same treatment as a day the habit wasn't
+even scheduled on. `HabitRow`'s action control gets a third visual state (muted
+circle, dash icon) alongside done/not-done.
+
+**Built: long-press menus.** `HabitRow`, `AvoidanceHabitRow`, and `TaskRow` all
+gained `combinedClickable` (tap = existing edit navigation, long-press = a
+`DropdownMenu`). Habits get Edit/Skip-or-Unskip/Delete; avoidance habits get
+Edit/Delete only (no skip — the continuous streak clock is already the avoidance
+equivalent); tasks get Edit/Delete. Delete goes through a shared confirm
+`AlertDialog` in `TodayScreen` (a `PendingDelete` sealed type covers both habit
+and task deletes) rather than acting immediately — same irreversible-action
+caution as every other delete in this app. `TodayViewModel` gained
+`skipHabit`/`unskipHabit`/`deleteHabit`/`deleteTask`, the latter two cancelling
+any scheduled reminders before deleting.
+
+**Found and fixed a real, pre-existing data-loss bug while verifying this**:
+`HabitRepository.refreshFromRemote()` only ever pulled the `habits` table down
+from Supabase — `habit_logs` were only ever pushed up, never pulled down. Any
+wiped or reinstalled local Room cache silently lost **all logged history**, even
+though it was sitting safely in Supabase the whole time. This wasn't a new bug —
+it predates this session — but it was effectively invisible until the DB version
+bump this session forced a wipe mid-testing and a habit's "Done" state didn't
+come back after reinstall. Root cause two-layered: (1) logs were never synced
+down at all, and (2) the push itself had been silently failing since `isSkipped`
+was added to the DTO, because `0003_habit_log_skipped.sql` hadn't been applied to
+the live database yet (same class of issue as the bullet-log migration earlier —
+`runCatching` swallows the Postgrest rejection with no visible error). **Fix**:
+added `HabitLogDao.upsertAll()` and extended `refreshFromRemote()` to also pull
+every `habit_logs` row for the user, same one-shot shape `getAllLogsForExport`
+already uses. Walked the user through applying the migration.
+
+**Verified, including a real destructive test**: `gradlew assembleDebug
+testDebugUnitTest lintDebug` green (7 `HabitStreakTest` + 8 `HabitReportMathTest`
+cases, including new skip-transparency cases). On-device: marked "Push-ups" done
+(streak badge appeared), then `adb shell pm clear com.loopwise.app` — a full
+local data + session wipe — reinstalled nothing (same APK), signed back in with
+Google, and confirmed the Reports heatmap still showed the earlier completed day
+(14% = 1/7, the historical day lit up) — proof the log genuinely round-tripped
+through Supabase and not just local cache luck.
+
+**Still open**: reordering habits (deferred, noted above). The wireless-debugging
+connection needed a full re-pair this session (toggled off/on gave a fresh port,
+old pairing had gone stale) — not a code issue, just a note for next time this
+comes up.
+
+---
+
 ## 2026-10-15 (cont'd) — Built task editing
 
 **Objective:** Closes a real gap flagged in the previous audit: tasks could be

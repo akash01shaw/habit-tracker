@@ -18,6 +18,7 @@ data class HabitLogEntity(
     val date: LocalDate,
     val value: Double,
     val isDone: Boolean,
+    val isSkipped: Boolean = false,
     val note: String?,
     val loggedAt: Instant,
     val isSynced: Boolean = true,
@@ -30,6 +31,7 @@ fun HabitLogEntity.toDomain() = HabitLog(
     date = date,
     value = value,
     isDone = isDone,
+    isSkipped = isSkipped,
     note = note,
     loggedAt = loggedAt,
 )
@@ -41,6 +43,7 @@ fun HabitLog.toEntity(isSynced: Boolean = true) = HabitLogEntity(
     date = date,
     value = value,
     isDone = isDone,
+    isSkipped = isSkipped,
     note = note,
     loggedAt = loggedAt,
     isSynced = isSynced,

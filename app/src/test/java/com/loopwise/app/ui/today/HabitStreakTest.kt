@@ -22,13 +22,14 @@ class HabitStreakTest {
         targetValue = target,
     )
 
-    private fun log(date: LocalDate, isDone: Boolean = true, value: Double = 0.0) = HabitLog(
+    private fun log(date: LocalDate, isDone: Boolean = true, value: Double = 0.0, isSkipped: Boolean = false) = HabitLog(
         id = date.toString(),
         habitId = "h1",
         userId = "u1",
         date = date,
         value = value,
         isDone = isDone,
+        isSkipped = isSkipped,
     )
 
     @Test
@@ -59,5 +60,25 @@ class HabitStreakTest {
     @Test
     fun `isLogComplete is false for a null log`() {
         assertEquals(false, isLogComplete(habit(), null))
+    }
+
+    @Test
+    fun `a skipped day is transparent - neither counts nor breaks the streak`() {
+        val logs = listOf(
+            log(today, isSkipped = true),
+            log(today.minusDays(1)),
+            log(today.minusDays(2)),
+        )
+        assertEquals(2, computeCurrentStreak(habit(), logs, today))
+    }
+
+    @Test
+    fun `a skipped day in the middle of a streak keeps both sides connected`() {
+        val logs = listOf(
+            log(today),
+            log(today.minusDays(1), isSkipped = true),
+            log(today.minusDays(2)),
+        )
+        assertEquals(2, computeCurrentStreak(habit(), logs, today))
     }
 }

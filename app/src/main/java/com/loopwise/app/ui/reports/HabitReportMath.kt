@@ -14,7 +14,7 @@ enum class ReportRange(val label: String, val days: Int) {
 }
 
 /** One cell in the heatmap strip, oldest first. [intensity] is 0f (not done) to 1f (done). */
-data class HeatmapDay(val date: LocalDate, val intensity: Float, val isScheduled: Boolean)
+data class HeatmapDay(val date: LocalDate, val intensity: Float, val isScheduled: Boolean, val isSkipped: Boolean = false)
 
 data class HabitReport(
     val habit: Habit,
@@ -38,10 +38,12 @@ fun buildHabitReport(habit: Habit, logs: List<HabitLog>, today: LocalDate, range
         val log = logsByDate[date]
         val scheduled = habit.isScheduledOn(date)
         val intensity = dayIntensity(habit, log)
-        HeatmapDay(date = date, intensity = intensity, isScheduled = scheduled)
+        HeatmapDay(date = date, intensity = intensity, isScheduled = scheduled, isSkipped = log?.isSkipped == true)
     }
 
-    val scheduledDays = heatmap.filter { it.isScheduled }
+    // A skipped day is excluded from completion% entirely — same reasoning as a
+    // not-scheduled day — rather than counted as either a hit or a miss.
+    val scheduledDays = heatmap.filter { it.isScheduled && !it.isSkipped }
     val completionPercent = if (scheduledDays.isEmpty()) {
         0
     } else {
@@ -51,7 +53,7 @@ fun buildHabitReport(habit: Habit, logs: List<HabitLog>, today: LocalDate, range
 
     var streak = 0
     for (day in heatmap.asReversed()) {
-        if (!day.isScheduled) continue
+        if (!day.isScheduled || day.isSkipped) continue
         if (day.intensity >= 1f) streak++ else break
     }
 

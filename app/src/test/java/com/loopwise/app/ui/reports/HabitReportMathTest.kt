@@ -24,13 +24,14 @@ class HabitReportMathTest {
         targetValue = target,
     )
 
-    private fun log(date: LocalDate, value: Double = 0.0, isDone: Boolean = false) = HabitLog(
+    private fun log(date: LocalDate, value: Double = 0.0, isDone: Boolean = false, isSkipped: Boolean = false) = HabitLog(
         id = UUID.randomUUID().toString(),
         habitId = "h1",
         userId = "u1",
         date = date,
         value = value,
         isDone = isDone,
+        isSkipped = isSkipped,
     )
 
     @Test
@@ -98,6 +99,36 @@ class HabitReportMathTest {
         assertEquals(0, report.completionPercent)
         assertEquals(0, report.streak)
         assertEquals(7, report.heatmap.size)
+    }
+
+    @Test
+    fun `a skipped day is excluded from completion percent, not counted as a miss`() {
+        val habit = dailyHabit()
+        // 7-day window: done today and yesterday, skipped 2 days ago, no log further back.
+        val logs = listOf(
+            log(today, isDone = true),
+            log(today.minusDays(1), isDone = true),
+            log(today.minusDays(2), isSkipped = true),
+        )
+
+        val report = buildHabitReport(habit, logs, today, ReportRange.WEEK)
+
+        // 2 done out of 6 scheduled (7 - 1 skipped), not 7.
+        assertEquals(33, report.completionPercent)
+    }
+
+    @Test
+    fun `a skipped day does not break the streak`() {
+        val habit = dailyHabit()
+        val logs = listOf(
+            log(today, isDone = true),
+            log(today.minusDays(1), isSkipped = true),
+            log(today.minusDays(2), isDone = true),
+        )
+
+        val report = buildHabitReport(habit, logs, today, ReportRange.WEEK)
+
+        assertEquals(2, report.streak)
     }
 
     @Test
