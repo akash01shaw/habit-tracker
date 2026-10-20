@@ -7,6 +7,28 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd 5) — Tuned blur + band widths per user reaction
+
+**Objective:** First look at the illustrated header: blur was too heavy ("too
+hazy, nothing visible"), and dusk's 6-hour window (17-23, i.e. until almost
+11pm) ran too long into the night.
+
+**Changed:**
+- `TopBannerHeader.kt`: blur radius 10dp → 3dp. Illustration detail (moon
+  craters, cloud shapes) is now clearly visible through it; scrim unchanged
+  since contrast wasn't the complaint.
+- `DayPeriod.forHour()`: dawn/dusk shortened to 4-hour windows, day/night
+  extended to 8-hour windows — dawn 5-9, day 9-17, dusk 17-21, night 21-5
+  (was the uneven dawn 5-11/day 11-17/dusk 17-23/night 23-5 from the previous
+  round). `DayPeriodTest` updated to assert the new boundaries and the
+  4/8/4/8 split.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean.
+On-device at the real device time (NIGHT band): moon and cloud detail now
+read clearly through the header; text still fully legible over the scrim.
+
+---
+
 ## 2026-10-21 (cont'd 4) — Illustrated time-of-day theme (images + app-wide color)
 
 **Objective:** User shared 4 reference landscape illustrations (dawn/day/dusk/

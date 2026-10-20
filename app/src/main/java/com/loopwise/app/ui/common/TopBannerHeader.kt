@@ -71,7 +71,7 @@ fun TopBannerHeader(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .then(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(10.dp) else Modifier),
+                .then(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(3.dp) else Modifier),
         )
         // Scrim keeps the white title/quote legible regardless of how bright the
         // illustration behind it is (dawn and day are both quite light).

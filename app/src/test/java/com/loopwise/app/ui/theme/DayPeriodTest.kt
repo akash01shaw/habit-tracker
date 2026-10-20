@@ -10,19 +10,21 @@ class DayPeriodTest {
         assertEquals(DayPeriod.NIGHT, DayPeriod.forHour(0))
         assertEquals(DayPeriod.NIGHT, DayPeriod.forHour(4))
         assertEquals(DayPeriod.DAWN, DayPeriod.forHour(5))
-        assertEquals(DayPeriod.DAWN, DayPeriod.forHour(10))
-        assertEquals(DayPeriod.DAY, DayPeriod.forHour(11))
+        assertEquals(DayPeriod.DAWN, DayPeriod.forHour(8))
+        assertEquals(DayPeriod.DAY, DayPeriod.forHour(9))
         assertEquals(DayPeriod.DAY, DayPeriod.forHour(16))
         assertEquals(DayPeriod.DUSK, DayPeriod.forHour(17))
-        assertEquals(DayPeriod.DUSK, DayPeriod.forHour(22))
+        assertEquals(DayPeriod.DUSK, DayPeriod.forHour(20))
+        assertEquals(DayPeriod.NIGHT, DayPeriod.forHour(21))
         assertEquals(DayPeriod.NIGHT, DayPeriod.forHour(23))
     }
 
     @Test
-    fun `every band covers exactly a 6-hour window`() {
+    fun `dawn and dusk are 4 hours, day and night are 8 hours`() {
         val bands = (0..23).map { DayPeriod.forHour(it) }
-        DayPeriod.entries.forEach { period ->
-            assertEquals(6, bands.count { it == period })
-        }
+        assertEquals(4, bands.count { it == DayPeriod.DAWN })
+        assertEquals(8, bands.count { it == DayPeriod.DAY })
+        assertEquals(4, bands.count { it == DayPeriod.DUSK })
+        assertEquals(8, bands.count { it == DayPeriod.NIGHT })
     }
 }

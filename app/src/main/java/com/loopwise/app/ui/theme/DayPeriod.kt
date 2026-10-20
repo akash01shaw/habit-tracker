@@ -20,11 +20,12 @@ enum class DayPeriod(@DrawableRes val backgroundRes: Int, val tint: Color, val a
     ;
 
     companion object {
-        /** Each band gets a fixed 6-hour window: dawn 5-11, day 11-17, dusk 17-23, night 23-5. */
+        /** Dawn/dusk get a short 4-hour window, day/night get a longer 8-hour one:
+         *  dawn 5-9, day 9-17, dusk 17-21, night 21-5. */
         fun forHour(hour: Int): DayPeriod = when (hour) {
-            in 5..10 -> DAWN
-            in 11..16 -> DAY
-            in 17..22 -> DUSK
+            in 5..8 -> DAWN
+            in 9..16 -> DAY
+            in 17..20 -> DUSK
             else -> NIGHT
         }
 
