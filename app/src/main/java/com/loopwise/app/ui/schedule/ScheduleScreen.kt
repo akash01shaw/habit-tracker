@@ -8,13 +8,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.ui.common.ComingSoonBody
+import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.schedule.components.AgendaView
 import com.loopwise.app.ui.schedule.components.ScheduleHeader
 import com.loopwise.app.ui.schedule.components.WeekGrid
@@ -28,7 +28,7 @@ fun ScheduleScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Schedule") }) }) { padding ->
+    Scaffold(topBar = { TopBannerHeader(screenLabel = "Schedule") }) { padding ->
         if (!state.isSignedIn) {
             ComingSoonBody(padding, "Sign in to see your schedule.")
             return@Scaffold

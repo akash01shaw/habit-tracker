@@ -21,7 +21,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +35,7 @@ import com.loopwise.app.domain.model.TimerEvent
 import com.loopwise.app.domain.model.TimerEventType
 import com.loopwise.app.domain.model.TimerMode
 import com.loopwise.app.ui.common.ComingSoonBody
+import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.theme.LoopwisePrimary
 import com.loopwise.app.ui.timer.components.TimerRing
 import java.time.ZoneId
@@ -47,7 +47,7 @@ private val eventTimeFormatter = DateTimeFormatter.ofPattern("MMM d yyyy h:mm a"
 fun TimerScreen(viewModel: TimerViewModel) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Timer") }) }) { padding ->
+    Scaffold(topBar = { TopBannerHeader(screenLabel = "Timer") }) { padding ->
         if (!state.isSignedIn) {
             ComingSoonBody(padding, "Sign in to use the focus timer.")
             return@Scaffold

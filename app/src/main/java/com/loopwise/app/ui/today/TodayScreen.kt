@@ -25,7 +25,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitType
 import com.loopwise.app.domain.model.Task
+import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.today.components.AvoidanceHabitRow
 import com.loopwise.app.ui.today.components.DateStrip
 import com.loopwise.app.ui.today.components.HabitRow
@@ -65,8 +65,8 @@ fun TodayScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Today") },
+            TopBannerHeader(
+                screenLabel = "Today",
                 actions = {
                     IconButton(onClick = viewModel::signOut) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")

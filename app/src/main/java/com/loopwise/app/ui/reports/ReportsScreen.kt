@@ -22,17 +22,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.ui.common.ComingSoonBody
+import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.reports.components.HabitReportRow
 
 @Composable
@@ -56,12 +57,12 @@ fun ReportsScreen(viewModel: ReportsViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Reports") },
+            TopBannerHeader(
+                screenLabel = "Reports",
                 actions = {
                     IconButton(onClick = viewModel::exportCsv, enabled = !isExporting) {
                         if (isExporting) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
                         } else {
                             Icon(Icons.Filled.Download, contentDescription = "Export as CSV")
                         }

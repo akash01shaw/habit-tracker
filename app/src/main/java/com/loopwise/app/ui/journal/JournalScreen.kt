@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.JournalEntryType
+import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.journal.components.JournalEntryCard
 
 @Composable
@@ -43,7 +43,7 @@ fun JournalScreen(viewModel: JournalViewModel, onAddEntry: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Journal") }) },
+        topBar = { TopBannerHeader(screenLabel = "Journal") },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddEntry) {
                 Icon(Icons.Filled.Add, contentDescription = "New journal entry")

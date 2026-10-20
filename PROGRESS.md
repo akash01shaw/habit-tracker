@@ -7,6 +7,39 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-20 (cont'd) — Replaced the plain top bar with a motivational quote banner
+
+**Objective:** First of a batch of UI/feature requests. User felt the top of each
+screen was wasted space (just "Today"/"Schedule"/etc.) and wanted something
+motivational there instead — asked via `AskUserQuestion`, picked "rotating
+quote, same across all 5 tabs" over a greeting or a live-progress message.
+
+**Built:**
+- `MotivationalQuotes`: a 30-quote list + `forDate(LocalDate)`, deterministic
+  (`epochDay mod size`) so every tab shows the *same* quote on a given day,
+  rather than a fresh random pick per screen/recomposition.
+- `TopBannerHeader`: replaces the plain `TopAppBar` on all 5 main tabs (Today,
+  Schedule, Timer, Reports, Journal) with a gradient (`LoopwisePrimary` →
+  `BuildPalette.Violet`) header showing a small uppercase screen label, the
+  day's quote, and each screen's existing actions (sign-out, CSV export) —
+  wrapped in `CompositionLocalProvider(LocalContentColor provides Color.White)`
+  so their icons stay visible against the colored background without changing
+  each screen's icon code. Handles status bar insets itself
+  (`statusBarsPadding()`) since it's a custom composable, not Material3's
+  inset-aware `TopAppBar`.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green (3 new
+`MotivationalQuotesTest` cases). Confirmed on-device across all 5 tabs — same
+quote everywhere, gradient renders correctly, action icons (sign-out, CSV
+export) stay white/visible against the background.
+
+**This is also the first touchpoint of the "more color & visual energy" UI
+direction** the user picked for the broader pass that follows — intentionally
+built with real visual weight (gradient, not a flat tint) as a proof point
+before extending the same direction elsewhere.
+
+---
+
 ## 2026-10-20 (cont'd) — Built Health Connect sync (Steps + Active Minutes)
 
 **Objective:** Last item from the original reprioritized list, and the one
