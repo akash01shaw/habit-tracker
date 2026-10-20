@@ -1,5 +1,6 @@
 package com.loopwise.app.data.remote.dto
 
+import com.loopwise.app.domain.model.JournalCategory
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
 import com.loopwise.app.domain.model.JournalVisibility
@@ -13,6 +14,7 @@ data class JournalEntryDto(
     @SerialName("owner_id") val ownerId: String,
     @SerialName("linked_habit_id") val linkedHabitId: String? = null,
     val type: String,
+    val category: String = "general",
     val content: String? = null,
     @SerialName("mood_value") val moodValue: Int? = null,
     val visibility: String = "private",
@@ -24,6 +26,7 @@ fun JournalEntryDto.toDomain() = JournalEntry(
     ownerId = ownerId,
     linkedHabitId = linkedHabitId,
     type = JournalEntryType.fromWire(type),
+    category = JournalCategory.fromWire(category),
     content = content,
     moodValue = moodValue,
     visibility = JournalVisibility.fromWire(visibility),
@@ -35,6 +38,7 @@ fun JournalEntry.toDto() = JournalEntryDto(
     ownerId = ownerId,
     linkedHabitId = linkedHabitId,
     type = type.wireValue,
+    category = category.wireValue,
     content = content,
     moodValue = moodValue,
     visibility = visibility.wireValue,

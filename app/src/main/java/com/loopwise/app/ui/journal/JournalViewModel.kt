@@ -11,6 +11,7 @@ import com.loopwise.app.domain.model.BulletItem
 import com.loopwise.app.domain.model.BulletKind
 import com.loopwise.app.domain.model.ChecklistItem
 import com.loopwise.app.domain.model.Habit
+import com.loopwise.app.domain.model.JournalCategory
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
 import com.loopwise.app.domain.model.decodeBulletItems
@@ -39,7 +40,9 @@ enum class JournalDateRange(val label: String, val days: Long?) {
 data class JournalFilterState(
     val habitId: String? = null,
     val type: JournalEntryType? = null,
+    val category: JournalCategory? = null,
     val dateRange: JournalDateRange = JournalDateRange.ALL_TIME,
+    val searchQuery: String = "",
 )
 
 data class JournalUiState(
@@ -51,6 +54,7 @@ data class JournalUiState(
 
 data class NewEntryFormState(
     val type: JournalEntryType = JournalEntryType.TEXT,
+    val category: JournalCategory = JournalCategory.GENERAL,
     val content: String = "",
     val moodValue: Int = 50,
     val checklistItems: List<ChecklistItem> = emptyList(),
@@ -94,15 +98,21 @@ class JournalViewModel(
                     flowOf(JournalUiState(isSignedIn = false))
                 } else {
                     combine(
-                        journalRepository.observeEntries(user.id, f.habitId, f.type),
+                        journalRepository.observeEntries(user.id, f.habitId, f.type, f.category),
                         habitRepository.observeHabits(user.id),
                     ) { entries, habits ->
                         val cutoffDays = f.dateRange.days
-                        val filteredEntries = if (cutoffDays == null) {
+                        val withinDateRange = if (cutoffDays == null) {
                             entries
                         } else {
                             val cutoff = Instant.now().minus(cutoffDays, ChronoUnit.DAYS)
                             entries.filter { !it.createdAt.isBefore(cutoff) }
+                        }
+                        val query = f.searchQuery.trim()
+                        val filteredEntries = if (query.isEmpty()) {
+                            withinDateRange
+                        } else {
+                            withinDateRange.filter { it.content?.contains(query, ignoreCase = true) == true }
                         }
                         JournalUiState(entries = filteredEntries, habits = habits, filter = f, isSignedIn = true)
                     }
@@ -119,6 +129,14 @@ class JournalViewModel(
 
     fun setDateRangeFilter(range: JournalDateRange) {
         filter.value = filter.value.copy(dateRange = range)
+    }
+
+    fun setCategoryFilter(category: JournalCategory?) {
+        filter.value = filter.value.copy(category = category)
+    }
+
+    fun setSearchQuery(query: String) {
+        filter.value = filter.value.copy(searchQuery = query)
     }
 
     fun toggleChecklistItem(entry: JournalEntry, index: Int) {
@@ -147,6 +165,10 @@ class JournalViewModel(
 
     fun onTypeChange(type: JournalEntryType) {
         _formState.value = _formState.value.copy(type = type, error = null)
+    }
+
+    fun onCategoryChange(category: JournalCategory) {
+        _formState.value = _formState.value.copy(category = category)
     }
 
     fun onContentChange(text: String) {
@@ -230,6 +252,7 @@ class JournalViewModel(
             ownerId = ownerId,
             linkedHabitId = state.linkedHabitId,
             type = state.type,
+            category = state.category,
             content = when (state.type) {
                 JournalEntryType.CHECKLIST -> encodeChecklistItems(state.checklistItems)
                 JournalEntryType.BULLET_LOG -> encodeBulletItems(state.bulletItems)

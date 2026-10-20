@@ -15,12 +15,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.Habit
+import com.loopwise.app.domain.model.JournalCategory
 import com.loopwise.app.domain.model.JournalEntryType
 import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.journal.components.JournalEntryCard
@@ -58,6 +61,15 @@ fun JournalScreen(viewModel: JournalViewModel, onAddEntry: () -> Unit) {
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            OutlinedTextField(
+                value = state.filter.searchQuery,
+                onValueChange = viewModel::setSearchQuery,
+                placeholder = { Text("Search journal entries") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -73,6 +85,10 @@ fun JournalScreen(viewModel: JournalViewModel, onAddEntry: () -> Unit) {
                 TypeFilterDropdown(
                     selectedType = state.filter.type,
                     onSelect = viewModel::setTypeFilter,
+                )
+                CategoryFilterDropdown(
+                    selectedCategory = state.filter.category,
+                    onSelect = viewModel::setCategoryFilter,
                 )
                 DateRangeFilterDropdown(
                     selectedRange = state.filter.dateRange,
@@ -151,6 +167,25 @@ private fun TypeFilterDropdown(selectedType: JournalEntryType?, onSelect: (Journ
                 text = { Text("Bullet Log") },
                 onClick = { onSelect(JournalEntryType.BULLET_LOG); expanded = false },
             )
+        }
+    }
+}
+
+@Composable
+private fun CategoryFilterDropdown(selectedCategory: JournalCategory?, onSelect: (JournalCategory?) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val label = selectedCategory?.label ?: "All Categories"
+
+    Box {
+        OutlinedButton(onClick = { expanded = true }) { Text(label) }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(text = { Text("All Categories") }, onClick = { onSelect(null); expanded = false })
+            JournalCategory.entries.forEach { category ->
+                DropdownMenuItem(
+                    text = { Text(category.label) },
+                    onClick = { onSelect(category); expanded = false },
+                )
+            }
         }
     }
 }

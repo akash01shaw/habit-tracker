@@ -3,6 +3,7 @@ package com.loopwise.app.data.local
 import androidx.room.TypeConverter
 import com.loopwise.app.domain.model.Frequency
 import com.loopwise.app.domain.model.HabitType
+import com.loopwise.app.domain.model.JournalCategory
 import com.loopwise.app.domain.model.JournalEntryType
 import com.loopwise.app.domain.model.JournalVisibility
 import com.loopwise.app.domain.model.TimerEvent
@@ -73,6 +74,12 @@ class Converters {
 
     @TypeConverter
     fun stringToJournalVisibility(value: String): JournalVisibility = JournalVisibility.fromWire(value)
+
+    @TypeConverter
+    fun journalCategoryToString(value: JournalCategory): String = value.wireValue
+
+    @TypeConverter
+    fun stringToJournalCategory(value: String): JournalCategory = JournalCategory.fromWire(value)
 
     @TypeConverter
     fun timerModeToString(value: TimerMode): String = value.wireValue

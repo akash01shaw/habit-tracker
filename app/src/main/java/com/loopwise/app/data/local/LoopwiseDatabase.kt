@@ -22,7 +22,7 @@ import com.loopwise.app.data.local.entities.TimerSessionEntity
         JournalEntryEntity::class,
         TimerSessionEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

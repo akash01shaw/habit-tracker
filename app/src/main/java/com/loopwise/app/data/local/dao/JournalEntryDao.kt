@@ -14,10 +14,11 @@ interface JournalEntryDao {
         WHERE ownerId = :ownerId AND isDeleted = 0
         AND (:habitId IS NULL OR linkedHabitId = :habitId)
         AND (:type IS NULL OR type = :type)
+        AND (:category IS NULL OR category = :category)
         ORDER BY createdAt DESC
         """,
     )
-    fun observeEntries(ownerId: String, habitId: String?, type: String?): Flow<List<JournalEntryEntity>>
+    fun observeEntries(ownerId: String, habitId: String?, type: String?, category: String?): Flow<List<JournalEntryEntity>>
 
     @Query("SELECT * FROM journal_entries WHERE isSynced = 0")
     suspend fun getUnsynced(): List<JournalEntryEntity>

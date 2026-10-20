@@ -2,6 +2,7 @@ package com.loopwise.app.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.loopwise.app.domain.model.JournalCategory
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
 import com.loopwise.app.domain.model.JournalVisibility
@@ -13,6 +14,7 @@ data class JournalEntryEntity(
     val ownerId: String,
     val linkedHabitId: String?,
     val type: JournalEntryType,
+    val category: JournalCategory = JournalCategory.GENERAL,
     val content: String?,
     val moodValue: Int?,
     val visibility: JournalVisibility,
@@ -26,6 +28,7 @@ fun JournalEntryEntity.toDomain() = JournalEntry(
     ownerId = ownerId,
     linkedHabitId = linkedHabitId,
     type = type,
+    category = category,
     content = content,
     moodValue = moodValue,
     visibility = visibility,
@@ -37,6 +40,7 @@ fun JournalEntry.toEntity(isSynced: Boolean = true) = JournalEntryEntity(
     ownerId = ownerId,
     linkedHabitId = linkedHabitId,
     type = type,
+    category = category,
     content = content,
     moodValue = moodValue,
     visibility = visibility,

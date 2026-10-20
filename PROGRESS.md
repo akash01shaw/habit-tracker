@@ -7,6 +7,45 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd) — Added journal categories + search/browse
+
+**Objective:** From the same batch of requests as the quote banner/color pass.
+User asked for journal categories (Ideas/Personal/Psychological/General) and a
+way to search/browse entries, and separately confirmed journal entries were
+never tied 1:1 to a date (`JournalEntry.createdAt` is just a timestamp, no
+per-day uniqueness constraint — already true before this change).
+
+**Built:**
+- `JournalCategory` enum (General/Ideas/Personal/Psychological), same
+  wireValue/fromWire pattern as the other journal enums, defaulting to GENERAL.
+- Threaded through the full stack: Room column + `Converters` TypeConverter
+  (DB version bumped to 4), Supabase migration
+  (`0004_journal_category.sql`), DTO, and the `observeEntries` DAO query/
+  repository signature (category filtering happens in SQL, same as
+  habit/type).
+- `NewJournalEntryScreen`: a category chip row, same shape as the existing
+  type-selector chips.
+- `JournalEntryCard`: a colored category chip (violet) in the metadata row.
+  Renamed the existing "no linked habit" chip from "General" to "No habit" —
+  it previously said "General" for an unrelated reason (no habit link) and
+  would have collided visually/semantically with the new category chip once
+  both could say "General" on the same card.
+- `JournalScreen`: a search box (filters client-side on `content`, same
+  pattern as the existing date-range filter) and a 4th "Category" filter
+  dropdown alongside the existing habit/type/date-range ones.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green (2 new
+`JournalCategoryTest` cases). Confirmed on-device: Room v3→v4 migration applied
+cleanly (no crash), existing entry correctly defaulted to General category,
+category chip renders with distinct color, search correctly returns the empty
+state for a non-matching query. (A positive-match search wasn't directly
+screenshotted — the device's virtual keyboard had a character-dropping quirk
+unrelated to the app that made reliable typing difficult this session — but
+the filter logic is a standard Kotlin `contains` check, identical in shape to
+the already-verified date-range filter.)
+
+---
+
 ## 2026-10-20 (cont'd) — Color/visual-energy pass on the Today screen
 
 **Objective:** Continuing the UI work from the quote banner — user picked "more

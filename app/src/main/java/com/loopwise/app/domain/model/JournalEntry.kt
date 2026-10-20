@@ -37,6 +37,7 @@ data class JournalEntry(
     val ownerId: String,
     val linkedHabitId: String? = null,
     val type: JournalEntryType,
+    val category: JournalCategory = JournalCategory.GENERAL,
     val content: String? = null,
     val moodValue: Int? = null,
     val visibility: JournalVisibility = JournalVisibility.PRIVATE,

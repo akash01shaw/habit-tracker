@@ -6,6 +6,7 @@ import com.loopwise.app.data.local.entities.toEntity
 import com.loopwise.app.data.remote.dto.JournalEntryDto
 import com.loopwise.app.data.remote.dto.toDomain
 import com.loopwise.app.data.remote.dto.toDto
+import com.loopwise.app.domain.model.JournalCategory
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
 import io.github.jan.supabase.SupabaseClient
@@ -17,8 +18,14 @@ class JournalRepository(
     private val client: SupabaseClient,
     private val journalEntryDao: JournalEntryDao,
 ) {
-    fun observeEntries(ownerId: String, habitId: String?, type: JournalEntryType?): Flow<List<JournalEntry>> =
-        journalEntryDao.observeEntries(ownerId, habitId, type?.wireValue).map { list -> list.map { it.toDomain() } }
+    fun observeEntries(
+        ownerId: String,
+        habitId: String?,
+        type: JournalEntryType?,
+        category: JournalCategory?,
+    ): Flow<List<JournalEntry>> =
+        journalEntryDao.observeEntries(ownerId, habitId, type?.wireValue, category?.wireValue)
+            .map { list -> list.map { it.toDomain() } }
 
     suspend fun upsertEntry(entry: JournalEntry) {
         journalEntryDao.upsert(entry.toEntity(isSynced = false))

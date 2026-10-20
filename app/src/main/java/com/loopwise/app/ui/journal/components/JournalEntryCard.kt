@@ -22,6 +22,7 @@ import com.loopwise.app.domain.model.BulletKind
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
+import com.loopwise.app.ui.theme.BuildPalette
 import com.loopwise.app.domain.model.decodeBulletItems
 import com.loopwise.app.domain.model.decodeChecklistItems
 import com.loopwise.app.domain.model.symbol
@@ -104,10 +105,12 @@ fun JournalEntryCard(
             ) {
                 Chip(text = dateTimeFormatter.format(entry.createdAt.atZone(ZoneId.systemDefault())))
 
+                Chip(text = entry.category.label, background = BuildPalette.Violet.copy(alpha = 0.2f))
+
                 if (linkedHabit != null) {
                     Chip(text = linkedHabit.name, background = Color(linkedHabit.color).copy(alpha = 0.2f))
                 } else {
-                    Chip(text = "General")
+                    Chip(text = "No habit")
                 }
 
                 if (entry.type == JournalEntryType.MOOD && entry.moodValue != null) {
