@@ -7,6 +7,67 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd 2) — Header redesign + fixed a real "1/1" completion-label bug
+
+**Objective:** User feedback on the quote-banner/color-pass round: the top banner
+still looked like empty wasted space with the quote crammed below the title
+eating into content, its height was inconsistent tab-to-tab, a splash of color
+at the top wasn't a real UI improvement, and — a separate, concrete bug report —
+a boolean habit ("Push-ups") always showed "1 / 1" and the user worried this
+meant future days were being marked complete by default.
+
+**Investigated the "1/1" report first** (`TodayViewModel.kt`, `HabitRow.kt`):
+it was not a data bug — `isDone` correctly defaults to `false` when no log
+exists for a date (confirmed via `HabitWithProgress.isDone = log?.isDone ?: false`,
+and future dates never get a log). The "1 / 1 time" text was a static label
+describing the boolean habit's target ("you need to do this once"), not a
+live progress fraction, so it read exactly like an already-completed counter.
+Changed the undone-state label from `"1 / 1 time"` to `"Not done yet"` in
+`HabitRow.kt`'s `progressLabel()`.
+
+**Root-caused the header inconsistency:** `TopBannerHeader` sized its title
+row to wrap-content, so screens with an action icon (Today's sign-out,
+Reports' export — both 48dp `IconButton` touch targets) got a taller header
+than screens without one (Timer, Schedule, Journal). Combined with the quote
+text allowed up to 3 lines, total height varied per screen and could grow
+large.
+
+**Rebuilt `TopBannerHeader.kt`:**
+- Title row given `heightIn(min = 40.dp)` so it's the same height whether or
+  not `actions` is supplied — this is what actually fixed the cross-tab
+  inconsistency, not just a visual tweak.
+- Quote capped to a single line with ellipsis (was up to 3) and demoted to a
+  small italic caption with a sparkle icon, so it reads as a subtitle rather
+  than competing with the screen title for space.
+- Banner given rounded bottom corners + a drop shadow so it reads as a
+  deliberate elevated header, not a flat color strip.
+
+**Extended the same visual language beyond Today** (the user's core complaint
+was that only Today got real treatment while Reports/Schedule/Journal stayed
+plain):
+- `HabitReportRow.kt`: wrapped in the same tinted-rounded-card pattern as
+  `HabitRow`/`TaskRow`, completion % is now a solid colored pill instead of
+  plain colored text.
+- `AgendaView.kt`'s `AgendaRow`: replaced the small color dot + divider with
+  a tinted card and a colored left accent bar, matching the habit/task row
+  language.
+- `JournalEntryCard.kt`: replaced the plain default `Card` with a
+  category-tinted background (new `JournalCategory.accentColor` mapping —
+  Sky/Amber/Violet/Teal for General/Ideas/Personal/Psychological), and the
+  category chip now uses that same color instead of a fixed violet.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean after
+each round. On-device screenshots confirmed the header is now pixel-identical
+in height across Today/Schedule/Timer/Reports/Journal, and the Reports/
+Schedule/Journal rows now carry color the same way Today's do.
+
+**Still open / explicitly deferred:** Timer screen's idle state (large grey
+ring, plain black background) and Schedule's week-grid view weren't touched
+this round — flagged as the next-most "flat" surfaces if another color pass
+is wanted. The user has not yet reacted to this round.
+
+---
+
 ## 2026-10-21 (cont'd) — Added journal categories + search/browse
 
 **Objective:** From the same batch of requests as the quote banner/color pass.

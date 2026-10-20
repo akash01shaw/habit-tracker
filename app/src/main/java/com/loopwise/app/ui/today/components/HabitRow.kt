@@ -219,7 +219,7 @@ private fun progressLabel(item: HabitWithProgress): String {
     val habit = item.habit
     val unit = habit.unit.orEmpty()
     return when (habit.type) {
-        HabitType.BOOLEAN -> if (item.isDone) "Done" else "1 / 1 time"
+        HabitType.BOOLEAN -> if (item.isDone) "Done" else "Not done yet"
         HabitType.COUNTER -> {
             val target = habit.targetValue?.let { formatNumber(it) } ?: "-"
             "${formatNumber(item.currentValue)} / $target $unit".trim()

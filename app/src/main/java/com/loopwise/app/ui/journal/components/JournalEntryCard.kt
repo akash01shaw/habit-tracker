@@ -2,12 +2,12 @@ package com.loopwise.app.ui.journal.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.BulletKind
 import com.loopwise.app.domain.model.Habit
+import com.loopwise.app.domain.model.JournalCategory
 import com.loopwise.app.domain.model.JournalEntry
 import com.loopwise.app.domain.model.JournalEntryType
 import com.loopwise.app.ui.theme.BuildPalette
@@ -31,6 +32,14 @@ import java.time.format.DateTimeFormatter
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("MMM d, h:mm a")
 
+private val JournalCategory.accentColor: Color
+    get() = when (this) {
+        JournalCategory.GENERAL -> BuildPalette.Sky
+        JournalCategory.IDEAS -> BuildPalette.Amber
+        JournalCategory.PERSONAL -> BuildPalette.Violet
+        JournalCategory.PSYCHOLOGICAL -> BuildPalette.Teal
+    }
+
 /** Card style follows the reference screenshots: content up top, a metadata chip row below. */
 @Composable
 fun JournalEntryCard(
@@ -40,7 +49,15 @@ fun JournalEntryCard(
     onToggleChecklistItem: (Int) -> Unit = {},
     onToggleBulletItem: (Int) -> Unit = {},
 ) {
-    Card(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+    val accent = entry.category.accentColor
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(accent.copy(alpha = 0.08f)),
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             when (entry.type) {
                 JournalEntryType.MOOD -> {
@@ -105,7 +122,7 @@ fun JournalEntryCard(
             ) {
                 Chip(text = dateTimeFormatter.format(entry.createdAt.atZone(ZoneId.systemDefault())))
 
-                Chip(text = entry.category.label, background = BuildPalette.Violet.copy(alpha = 0.2f))
+                Chip(text = entry.category.label, background = accent.copy(alpha = 0.22f))
 
                 if (linkedHabit != null) {
                     Chip(text = linkedHabit.name, background = Color(linkedHabit.color).copy(alpha = 0.2f))
