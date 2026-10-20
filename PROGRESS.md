@@ -7,6 +7,43 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd 3) — Time-of-day header (dawn/day/dusk/night)
+
+**Objective:** User asked, as a "let's see if it lands" experiment, whether the
+header could shift visually with the time of day — sunrise colors in the
+morning, bright midday, sunset tones in the evening, dark/moon at night. Chose
+the time-of-day version over a live-weather version (discussed but not built):
+weather needs an API key, location permission, a network call on every app
+open, and an offline/error fallback — real scope — versus time-of-day, which
+reads `LocalTime.now()` the same way the quote-of-the-day already reads
+`LocalDate.now()`, no new permissions or dependencies.
+
+**Built:**
+- `DayPeriod.kt` (new): 4 fixed bands — DAWN (5-7h, coral/gold, `WbTwilight`),
+  DAY (8-16h, sky blue/amber, `WbSunny`), DUSK (17-19h, orange/purple,
+  `WbTwilight`), NIGHT (20-4h, navy, `NightlightRound`) — each carrying a
+  gradient pair + icon. Deliberately coarse whole-hour bands rather than a
+  continuous color interpolation, so the shift reads as "time of day changed"
+  rather than a glitch.
+- `TopBannerHeader.kt`: gradient and the small icon next to the quote now
+  come from `DayPeriod.current()` instead of the fixed indigo/violet pair;
+  also added a large, low-alpha (16%) version of the same icon as a
+  background watermark in the banner's top-right corner, behind the title/
+  actions.
+- `DayPeriodTest.kt` (new): boundary-hour mapping for all 4 bands, plus a
+  coverage check that all 24 hours map to exactly the 4 defined bands with no
+  gaps.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean.
+On-device at the actual device time (≈4 AM, NIGHT band): deep navy gradient,
+crescent-moon watermark and quote icon rendered correctly. DAWN/DAY/DUSK
+weren't separately screenshotted (changing system clock needs root), but the
+hour→band mapping is exhaustively unit-tested and the rest (gradient/icon
+selection) is a straight lookup on that same enum, so the remaining 3 bands
+carry the same confidence.
+
+---
+
 ## 2026-10-21 (cont'd 2) — Header redesign + fixed a real "1/1" completion-label bug
 
 **Objective:** User feedback on the quote-banner/color-pass round: the top banner
