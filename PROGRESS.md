@@ -7,6 +7,89 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-20 (cont'd) — Built Health Connect sync (Steps + Active Minutes)
+
+**Objective:** Last item from the original reprioritized list, and the one
+flagged from the start as hardest to verify ("can't be verified without the
+device and real health data already flowing into it from somewhere"). Spec §2.2
+names Steps and Active Minutes explicitly against a habit; the broader §2.8 list
+(Distance, Stand hours, Active calories, Workouts) is deliberately not built —
+scoped to exactly what the habit-level spec calls for.
+
+**Found the field already existed, unused.** `Habit.healthSyncSource: String?`
+was already threaded through the full data layer (Room, Supabase DTO, domain
+model) from the original schema design, but nothing ever set it or read from
+Health Connect. This was a from-scratch build on top of that one pre-wired field.
+
+**Built:**
+- `androidx.health.connect:connect-client` dependency; manifest permissions
+  (`READ_STEPS`, `READ_EXERCISE`) and a `<queries>` entry for the Health Connect
+  package.
+- `HealthSyncSource` enum (STEPS / ACTIVE_MINUTES) with the same
+  wireValue/fromWire pattern as `HabitType`.
+- `HealthConnectManager`: checks SDK availability, exposes the permission set
+  and request contract, reads today's total via `aggregate()` for Steps and by
+  summing `ExerciseSessionRecord` durations for Active Minutes (the latter
+  pulled into a standalone `sumExerciseMinutes()` for unit testing, since the
+  manager itself needs a real Health Connect client to test).
+- `CreateEditHabitScreen`: a "Sync from Health Connect" chip picker (Manual /
+  Steps / Active Minutes), shown only for Counter/Duration habits, that launches
+  the permission request via `rememberLauncherForActivityResult` when a source
+  is picked.
+- `TodayViewModel.syncHealthData()`: pulls today's value for every
+  Health-Connect-linked habit and logs it, same shape a manual tap would — runs
+  automatically as part of `refresh()` (sign-in, date change) and manually when
+  the habit row's sync icon is tapped.
+- `HabitRow`'s action control already had a sync-icon branch from the original
+  build plan (`isSynced -> Icons.Filled.Sync`) but tapping it just called the
+  same increment as a manual counter; it now calls `syncHealthData()` instead.
+
+**Found and fixed the real blocker, after a long on-device debugging session:**
+Health Connect's permission-grant dialog was opening and silently closing within
+~50ms, over and over, across several reinstalls and even when the user tried to
+tap Allow directly — confirmed via `dumpsys package` that permissions stayed
+`granted=false` through every attempt. Root cause: Health Connect requires the
+requesting app to declare handlers for two intents —
+`androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` (its in-dialog privacy link,
+API 34+) and `android.intent.action.VIEW_PERMISSION_USAGE` with category
+`android.intent.category.HEALTH_PERMISSIONS` (the "why does this app have
+access" screen) — or the grant flow can fail silently instead of erroring
+visibly. Added both to `AndroidManifest.xml` (the second via an `activity-alias`
+targeting `MainActivity`, matching the pattern from Google's own Health Connect
+sample app). After that fix, the permission dialog stayed open and granted
+correctly on the first real attempt.
+
+**Also discovered Samsung Health wasn't connected to Health Connect at all** on
+this device — Health Connect's "Data and access" screen showed no Steps category
+whatsoever before this was fixed, meaning no data source had ever written step
+data into Health Connect. The user connected Samsung Health → Health Connect
+sync (Samsung Health's own settings, not Health Connect's) directly on the
+phone, which is what made real step data available to read.
+
+**Verified for real, not just granted:** after fixing both issues, created a
+"Steps" habit (Counter, target 5000), selected the Steps Health Connect source,
+granted the permission (confirmed via `dumpsys package` showing
+`READ_STEPS: granted=true`, `READ_EXERCISE: granted=true`), tapped the sync icon
+on Today, and the row updated to **4188 / 5000 steps** — a genuine live read
+sourced from Samsung Health via Health Connect, not a placeholder or zero.
+Active Minutes shares the identical permission/manager/UI path (differing only
+in which Health Connect API executes, which `HealthMathTest` already covers) —
+not separately device-verified this session since no real exercise session
+existed yet this early in the day to produce a non-ambiguous result, but
+confidence is high given the proven-working shared plumbing.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green
+throughout (new `HealthSyncSourceTest` + `HealthMathTest`, 6 cases total).
+
+**Still open**: Distance/Stand hours/Active calories/Workouts (§2.8's broader
+list) not built — deliberately scoped out, matching only what §2.2 names at the
+habit level. A real privacy-policy page behind the rationale link is also not
+built (the manifest handler exists and satisfies the permission flow, but it
+just opens the app rather than showing actual policy text) — fine for
+personal/dev use, would need real content before any Play Store submission.
+
+---
+
 ## 2026-10-20 (cont'd) — Verified long-press menu + Skip/Unskip on-device
 
 Picked back up after a multi-day gap; wireless debugging needed a full re-pair

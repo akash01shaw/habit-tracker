@@ -2,6 +2,7 @@
 
 package com.loopwise.app.ui.habitedit
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,8 +50,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.health.connect.client.PermissionController
 import com.loopwise.app.domain.model.FrequencyKind
 import com.loopwise.app.domain.model.HabitType
+import com.loopwise.app.domain.model.HealthSyncSource
 import com.loopwise.app.ui.habitedit.components.ReminderPicker
 
 @Composable
@@ -61,6 +64,9 @@ fun CreateEditHabitScreen(
 ) {
     val state by viewModel.formState.collectAsState()
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    val healthPermissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {}
 
     LaunchedEffect(habitId) {
         if (habitId != null) viewModel.loadForEdit(habitId)
@@ -179,6 +185,36 @@ fun CreateEditHabitScreen(
                         onValueChange = viewModel::onUnitChange,
                         label = { Text("Unit (e.g. cups, min)") },
                         modifier = Modifier.weight(1f),
+                    )
+                }
+
+                SectionLabel("Sync from Health Connect")
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = state.healthSyncSource == null,
+                        onClick = { viewModel.onHealthSyncSourceChange(null) },
+                        label = { Text("Manual") },
+                    )
+                    HealthSyncSource.entries.forEach { source ->
+                        FilterChip(
+                            selected = state.healthSyncSource == source,
+                            onClick = {
+                                viewModel.onHealthSyncSourceChange(source)
+                                healthPermissionLauncher.launch(viewModel.healthPermissions)
+                            },
+                            label = { Text(source.label) },
+                        )
+                    }
+                }
+                if (state.healthSyncSource != null) {
+                    Text(
+                        "Today's value auto-fills from Health Connect — tap the sync icon on Today to refresh it manually.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }

@@ -65,6 +65,7 @@ fun HabitRow(
     onSkip: () -> Unit,
     onUnskip: () -> Unit,
     onDelete: () -> Unit,
+    onSyncNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val habit = item.habit
@@ -134,7 +135,11 @@ fun HabitRow(
         HabitActionControl(
             item = item,
             color = color,
-            onClick = if (item.isSkipped) onUnskip else onPrimaryAction,
+            onClick = when {
+                item.isSkipped -> onUnskip
+                item.habit.healthSyncSource != null -> onSyncNow
+                else -> onPrimaryAction
+            },
         )
     }
 }

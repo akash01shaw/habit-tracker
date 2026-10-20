@@ -149,6 +149,7 @@ fun TodayScreen(
                             onSkip = { viewModel.skipHabit(item) },
                             onUnskip = { viewModel.unskipHabit(item) },
                             onDelete = { pendingDelete = PendingDelete.HabitDelete(item.habit) },
+                            onSyncNow = { viewModel.syncHealthData() },
                         )
                     }
                 }

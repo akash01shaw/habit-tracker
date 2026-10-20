@@ -4,12 +4,14 @@ package com.loopwise.app.ui.today
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.loopwise.app.data.health.HealthConnectManager
 import com.loopwise.app.data.repository.AuthRepository
 import com.loopwise.app.data.repository.HabitRepository
 import com.loopwise.app.data.repository.TaskRepository
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitLog
 import com.loopwise.app.domain.model.HabitType
+import com.loopwise.app.domain.model.HealthSyncSource
 import com.loopwise.app.domain.model.Task
 import com.loopwise.app.notifications.ReminderScheduler
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +48,7 @@ class TodayViewModel(
     private val habitRepository: HabitRepository,
     private val taskRepository: TaskRepository,
     private val reminderScheduler: ReminderScheduler,
+    private val healthConnectManager: HealthConnectManager,
 ) : ViewModel() {
 
     private val selectedDate = MutableStateFlow(LocalDate.now())
@@ -117,6 +120,34 @@ class TodayViewModel(
             taskRepository.refreshFromRemote(userId, selectedDate.value)
             habitRepository.syncPending()
             taskRepository.syncPending()
+            syncHealthData()
+        }
+    }
+
+    /**
+     * Pulls today's value for every Health Connect-linked habit and logs it, same as a
+     * manual tap would. Only applies to "today" — Health Connect's live reading has no
+     * meaningful answer for a past day in the date strip. No-ops quietly if Health
+     * Connect isn't installed or permission hasn't been granted (it's an optional
+     * auto-fill, not a requirement). Also what the sync icon's tap triggers manually.
+     */
+    fun syncHealthData() {
+        if (selectedDate.value != LocalDate.now()) return
+        val userId = authRepository.currentUserIdOrNull() ?: return
+        viewModelScope.launch {
+            if (!healthConnectManager.hasAllPermissions()) return@launch
+            uiState.value.habits.forEach { item ->
+                val source = HealthSyncSource.fromWire(item.habit.healthSyncSource) ?: return@forEach
+                val value = healthConnectManager.readValueForToday(source) ?: return@forEach
+                val target = item.habit.targetValue ?: Double.MAX_VALUE
+                habitRepository.logProgress(
+                    habitId = item.habit.id,
+                    userId = userId,
+                    date = selectedDate.value,
+                    value = value,
+                    isDone = value >= target,
+                )
+            }
         }
     }
 

@@ -4,12 +4,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.loopwise.app.data.health.HealthConnectManager
 import com.loopwise.app.data.repository.AuthRepository
 import com.loopwise.app.data.repository.HabitRepository
 import com.loopwise.app.domain.model.Frequency
 import com.loopwise.app.domain.model.FrequencyKind
 import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitType
+import com.loopwise.app.domain.model.HealthSyncSource
 import com.loopwise.app.notifications.ReminderScheduler
 import com.loopwise.app.ui.theme.BuildPalette
 import com.loopwise.app.ui.theme.QuitPalette
@@ -34,6 +36,7 @@ data class CreateHabitFormState(
     val perPeriodCount: Int = 1,
     val targetValue: String = "",
     val unit: String = "",
+    val healthSyncSource: HealthSyncSource? = null,
     val reminders: List<LocalTime> = emptyList(),
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
@@ -56,7 +59,11 @@ class CreateEditHabitViewModel(
     private val authRepository: AuthRepository,
     private val habitRepository: HabitRepository,
     private val reminderScheduler: ReminderScheduler,
+    private val healthConnectManager: HealthConnectManager,
 ) : ViewModel() {
+
+    /** The permission set the Screen's ActivityResultLauncher requests — sourced from one place. */
+    val healthPermissions: Set<String> get() = healthConnectManager.permissions
 
     private val _formState = MutableStateFlow(CreateHabitFormState())
     val formState: StateFlow<CreateHabitFormState> = _formState.asStateFlow()
@@ -87,6 +94,7 @@ class CreateEditHabitViewModel(
                 perPeriodCount = habit.frequency.count ?: 1,
                 targetValue = habit.targetValue?.let { if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString() } ?: "",
                 unit = habit.unit.orEmpty(),
+                healthSyncSource = HealthSyncSource.fromWire(habit.healthSyncSource),
                 reminders = habit.reminders,
             )
         }
@@ -98,7 +106,12 @@ class CreateEditHabitViewModel(
 
     fun onTypeChange(type: HabitType) {
         val palette = if (type == HabitType.AVOIDANCE) QuitPalette.all else BuildPalette.all
-        _formState.value = _formState.value.copy(type = type, color = palette.first().toArgbLong())
+        val needsTarget = type == HabitType.COUNTER || type == HabitType.DURATION
+        _formState.value = _formState.value.copy(
+            type = type,
+            color = palette.first().toArgbLong(),
+            healthSyncSource = _formState.value.healthSyncSource.takeIf { needsTarget },
+        )
     }
 
     fun onColorChange(color: Long) {
@@ -126,6 +139,10 @@ class CreateEditHabitViewModel(
 
     fun onUnitChange(value: String) {
         _formState.value = _formState.value.copy(unit = value)
+    }
+
+    fun onHealthSyncSourceChange(source: HealthSyncSource?) {
+        _formState.value = _formState.value.copy(healthSyncSource = source)
     }
 
     fun addReminder(time: LocalTime) {
@@ -172,6 +189,7 @@ class CreateEditHabitViewModel(
             frequency = frequency,
             targetValue = target,
             unit = state.unit.trim().ifBlank { null },
+            healthSyncSource = state.healthSyncSource?.wireValue,
             reminders = state.reminders,
             createdAt = state.createdAt ?: Instant.now(),
         )

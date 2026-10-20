@@ -2,6 +2,7 @@ package com.loopwise.app.di
 
 import androidx.room.Room
 import com.loopwise.app.data.export.CsvFileWriter
+import com.loopwise.app.data.health.HealthConnectManager
 import com.loopwise.app.data.local.LoopwiseDatabase
 import com.loopwise.app.data.remote.buildSupabaseClient
 import com.loopwise.app.data.repository.AuthRepository
@@ -42,10 +43,11 @@ val appModule = module {
     single { TimerRepository(get(), get()) }
     single { ReminderScheduler(get()) }
     single { CsvFileWriter(get()) }
+    single { HealthConnectManager(get()) }
 
     viewModel { AuthViewModel(get()) }
-    viewModel { TodayViewModel(get(), get(), get(), get()) }
-    viewModel { CreateEditHabitViewModel(get(), get(), get()) }
+    viewModel { TodayViewModel(get(), get(), get(), get(), get()) }
+    viewModel { CreateEditHabitViewModel(get(), get(), get(), get()) }
     viewModel { ReportsViewModel(get(), get(), get()) }
     viewModel { JournalViewModel(get(), get(), get()) }
     viewModel { CreateTaskViewModel(get(), get(), get()) }
