@@ -55,6 +55,7 @@ import com.loopwise.app.domain.model.FrequencyKind
 import com.loopwise.app.domain.model.HabitType
 import com.loopwise.app.domain.model.HealthSyncSource
 import com.loopwise.app.ui.habitedit.components.ReminderPicker
+import com.loopwise.app.ui.theme.LocalDayPeriod
 
 @Composable
 fun CreateEditHabitScreen(
@@ -63,13 +64,14 @@ fun CreateEditHabitScreen(
     onDone: () -> Unit,
 ) {
     val state by viewModel.formState.collectAsState()
+    val period = LocalDayPeriod.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val healthPermissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract(),
     ) {}
 
     LaunchedEffect(habitId) {
-        if (habitId != null) viewModel.loadForEdit(habitId)
+        if (habitId != null) viewModel.loadForEdit(habitId) else viewModel.seedThemeColorForNewHabit(period)
     }
 
     LaunchedEffect(state.saved, state.deleted) {

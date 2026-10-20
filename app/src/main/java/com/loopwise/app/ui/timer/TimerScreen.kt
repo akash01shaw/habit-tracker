@@ -36,7 +36,6 @@ import com.loopwise.app.domain.model.TimerEventType
 import com.loopwise.app.domain.model.TimerMode
 import com.loopwise.app.ui.common.ComingSoonBody
 import com.loopwise.app.ui.common.TopBannerHeader
-import com.loopwise.app.ui.theme.LoopwisePrimary
 import com.loopwise.app.ui.timer.components.TimerRing
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -103,7 +102,7 @@ fun TimerScreen(viewModel: TimerViewModel) {
                     progress = if (state.mode == TimerMode.COUNTDOWN) state.progressFraction else 0f,
                     timeText = formatSeconds(state.displaySeconds),
                     subtitleText = if (state.mode == TimerMode.COUNTDOWN) "${state.targetMinutes}m target" else "elapsed",
-                    color = LoopwisePrimary,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
 

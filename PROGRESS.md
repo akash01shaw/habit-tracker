@@ -7,6 +7,55 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd 6) — Per-period light/dark + theme-matched default habit color
+
+**Objective:** Two follow-up requests after reviewing the illustrated theme. (1)
+Stop following the device's system dark/light setting — dawn and day should
+always render light, dusk and night always dark, regardless of the phone's
+own theme toggle. (2) Every habit a user creates defaulted to blue
+regardless of time of day (the create-habit form's color picker always
+pre-selected `BuildPalette.Blue`); asked whether new habits/tasks/reports
+could instead start out matching the active theme — distinct from colors
+already on screen, vivid, "dynamic."
+
+**Light/dark split:** `DayPeriod` gained `isDarkPalette` (false for
+DAWN/DAY, true for DUSK/NIGHT). `LoopwiseTheme` no longer takes a
+`darkTheme` param defaulting to `isSystemInDarkTheme()` — it derives
+dark/light straight from `dayPeriod.isDarkPalette`. Verified on-device:
+forcing DAWN rendered the whole app light (pink-tinted background, dark
+text) independent of the device's own dark-mode setting.
+
+**Theme-matched default habit color:** Scoped this to habits only — tasks
+have no per-item color at all (`Task.kt` has no color field; every task
+already shares the single `accentTodo` theme color from the earlier round),
+and the user confirmed building per-task colors is a separate future
+feature, not part of this round. Journal entries also keep their own
+category-color axis untouched, same reasoning as before.
+- `DayPeriod` gained `accentHabit`: a vivid warm color per band (gold for
+  dawn/day/night, amber for dusk — echoing the sun/moon glow in each
+  illustration), distinct from `accent`/`accentTodo`/`accentQuit` already
+  used elsewhere on screen.
+- `CreateEditHabitViewModel.seedThemeColorForNewHabit(period)`: called once
+  from `CreateEditHabitScreen` only when creating a brand-new habit (never
+  when editing an existing one, so a saved habit's color is never
+  overwritten). Sets the form's starting color to `accentHabit` for normal
+  habits or the already-existing muted `accentQuit` for avoidance habits.
+  `onTypeChange`'s color reset (switching the Type chip) now uses these
+  theme colors too, replacing the old flat `palette.first()` reset.
+- Known UX quirk, left as-is per user ("no change needed"): the theme color
+  usually isn't one of the 8 visible preset swatches, so no swatch shows a
+  selection ring for a freshly-opened new-habit form even though the real
+  color is correctly applied underneath — confirmed by creating a habit
+  without touching the picker and checking its rendered color on Today.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean.
+On-device: created 4 test habits (ReadBooks/Rose, Meditate/Violet,
+DrinkWater/Green, Stretch/Cyan) with manually-picked distinct colors for a
+richer Today/Reports review; confirmed DAWN renders fully light while NIGHT
+stays dark, independent of the device's own system theme setting.
+
+---
+
 ## 2026-10-21 (cont'd 5) — Tuned blur + band widths per user reaction
 
 **Objective:** First look at the illustrated header: blur was too heavy ("too

@@ -37,8 +37,7 @@ import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitType
 import com.loopwise.app.domain.model.Task
 import com.loopwise.app.ui.common.TopBannerHeader
-import com.loopwise.app.ui.theme.BuildPalette
-import com.loopwise.app.ui.theme.QuitPalette
+import com.loopwise.app.ui.theme.LocalDayPeriod
 import com.loopwise.app.ui.today.components.AvoidanceHabitRow
 import com.loopwise.app.ui.today.components.DateStrip
 import com.loopwise.app.ui.today.components.HabitRow
@@ -59,6 +58,7 @@ fun TodayScreen(
     onEditTask: (String) -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
+    val period = LocalDayPeriod.current
     var tasksExpanded by remember { mutableStateOf(true) }
     var habitsExpanded by remember { mutableStateOf(true) }
     var avoidanceExpanded by remember { mutableStateOf(true) }
@@ -113,7 +113,7 @@ fun TodayScreen(
                     icon = Icons.Filled.ChecklistRtl,
                     expanded = tasksExpanded,
                     onToggle = { tasksExpanded = !tasksExpanded },
-                    accentColor = BuildPalette.Teal,
+                    accentColor = period.accentTodo,
                 )
             }
             if (tasksExpanded) {
@@ -138,7 +138,7 @@ fun TodayScreen(
                     icon = Icons.Filled.CheckCircleOutline,
                     expanded = habitsExpanded,
                     onToggle = { habitsExpanded = !habitsExpanded },
-                    accentColor = BuildPalette.Blue,
+                    accentColor = period.accent,
                 )
             }
             if (habitsExpanded) {
@@ -166,7 +166,7 @@ fun TodayScreen(
                     icon = Icons.Filled.Block,
                     expanded = avoidanceExpanded,
                     onToggle = { avoidanceExpanded = !avoidanceExpanded },
-                    accentColor = QuitPalette.Rust,
+                    accentColor = period.accentQuit,
                 )
             }
             if (avoidanceExpanded) {

@@ -36,15 +36,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.Task
-import com.loopwise.app.ui.theme.BuildPalette
+import com.loopwise.app.ui.theme.LocalDayPeriod
 import java.time.format.DateTimeFormatter
 
 private val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
-private val taskAccentColor = BuildPalette.Teal
 
 @Composable
 fun TaskRow(task: Task, onToggle: () -> Unit, onClick: () -> Unit, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     var showMenu by remember { mutableStateOf(false) }
+    val taskAccentColor = LocalDayPeriod.current.accentTodo
 
     Row(
         modifier = modifier
