@@ -7,6 +7,36 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-20 (cont'd) — Color/visual-energy pass on the Today screen
+
+**Objective:** Continuing the UI work from the quote banner — user picked "more
+color & visual energy" for the broader pass. Scoped this round to the Today
+screen's biggest visual gap: its three section headers and the To-Do list were
+plain gray/monochrome next to the already-vivid colored habit pills.
+
+**Built:**
+- `SectionHeader` gained an `accentColor` parameter: the icon now sits in a
+  tinted circle, and the count badge is a colored pill, instead of both being
+  flat gray. Each of Today's three sections gets its own color — To-Do List
+  (teal), Daily Habits (blue), Habits I'm Quitting (rust, matching the
+  dark/restraint `QuitPalette` framing from spec §5 rather than a bright
+  build-habit color).
+- `TaskRow` gained the same tinted rounded-card treatment `HabitRow` already
+  had (it was the one plain, cardless row on the whole screen) — teal
+  background tint matching its section, and the complete-checkbox icon now
+  tints teal instead of plain primary-color blue when checked.
+
+**Verified:** `gradlew assembleDebug testDebugUnitTest lintDebug` green (no new
+logic, so no new tests — this is a pure styling change). Confirmed on-device:
+section headers show distinct colored icon circles and count pills.
+
+**Still open**: this round only covered Today — Reports/Journal/Schedule
+weren't touched since they already lean on per-habit colors (heatmap bars,
+linked-habit chips) rather than being flat. Will revisit if more visual energy
+is wanted there too after seeing this round.
+
+---
+
 ## 2026-10-20 (cont'd) — Replaced the plain top bar with a motivational quote banner
 
 **Objective:** First of a batch of UI/feature requests. User felt the top of each

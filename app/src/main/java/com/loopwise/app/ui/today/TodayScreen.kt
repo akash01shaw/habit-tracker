@@ -37,6 +37,8 @@ import com.loopwise.app.domain.model.Habit
 import com.loopwise.app.domain.model.HabitType
 import com.loopwise.app.domain.model.Task
 import com.loopwise.app.ui.common.TopBannerHeader
+import com.loopwise.app.ui.theme.BuildPalette
+import com.loopwise.app.ui.theme.QuitPalette
 import com.loopwise.app.ui.today.components.AvoidanceHabitRow
 import com.loopwise.app.ui.today.components.DateStrip
 import com.loopwise.app.ui.today.components.HabitRow
@@ -111,6 +113,7 @@ fun TodayScreen(
                     icon = Icons.Filled.ChecklistRtl,
                     expanded = tasksExpanded,
                     onToggle = { tasksExpanded = !tasksExpanded },
+                    accentColor = BuildPalette.Teal,
                 )
             }
             if (tasksExpanded) {
@@ -135,6 +138,7 @@ fun TodayScreen(
                     icon = Icons.Filled.CheckCircleOutline,
                     expanded = habitsExpanded,
                     onToggle = { habitsExpanded = !habitsExpanded },
+                    accentColor = BuildPalette.Blue,
                 )
             }
             if (habitsExpanded) {
@@ -162,6 +166,7 @@ fun TodayScreen(
                     icon = Icons.Filled.Block,
                     expanded = avoidanceExpanded,
                     onToggle = { avoidanceExpanded = !avoidanceExpanded },
+                    accentColor = QuitPalette.Rust,
                 )
             }
             if (avoidanceExpanded) {
