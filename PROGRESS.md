@@ -7,6 +7,76 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd 4) — Illustrated time-of-day theme (images + app-wide color)
+
+**Objective:** User shared 4 reference landscape illustrations (dawn/day/dusk/
+night — coral sunrise, bright blue midday, pink-lavender dusk, indigo night
+with moon) and asked for something bigger than a flat gradient: the actual
+illustrations as the header background (softly blurred/darkened so text stays
+legible, without changing the font treatment itself), plus the app's
+background, text, and bottom-nav colors shifting to match whichever image is
+active. In between, there was a short-lived flat-gradient-only version (no
+real images, just 4 color pairs + a Material icon) that the user asked to
+revert before this richer version — that attempt and its revert aren't
+separately logged here since it was fully superseded within the same
+session. Mid-build, also asked for the source images to be normalized
+(consistent crop/size) before going into the app, and for each band to get a
+fixed 6-hour window instead of an uneven split.
+
+**Normalized the 4 source images** before adding them as resources:
+originally 545-547 x 147-148px with inconsistent per-image dimensions. Used
+PowerShell + System.Drawing (no ImageMagick/Python available in this
+environment) to trim 2px from each edge (drops any stray export-boundary
+fringe) and resize all 4 to an identical 1200x320, flattened to opaque 24bpp
+RGB (no alpha, so no edge transparency artifacts), saved to
+`res/drawable-nodpi/bg_{dawn,day,dusk,night}.png`. Hit a real bug here: a
+first processing pass threw non-terminating errors (bad `Rectangle`
+construction) but still completed its `Move-Item`, silently overwriting the
+source files with blank black bitmaps; a second "clean" run then resized
+*that* already-corrupted black image and reported success with no errors.
+Caught this by checking actual pixel values on disk (`GetPixel`) rather than
+trusting the "no errors" output, then regenerated from the untouched chat-
+shared originals with a pixel sanity check built into the script this time.
+
+**Built:**
+- `DayPeriod.kt` (lives in `ui/theme`, not `ui/common` — it's a core theming
+  concept now, not just a header widget): each band carries a
+  `@DrawableRes backgroundRes`, a `tint` (app-wide background wash) and an
+  `accent` (bottom nav / highlight color), eyeballed from that band's
+  illustration. `forHour()` gives every band an exact fixed 6-hour window —
+  dawn 5-11, day 11-17, dusk 17-23, night 23-5.
+- `TopBannerHeader.kt`: background is the actual illustration (`Image` +
+  `ContentScale.Crop`), blurred 10dp on API 31+ (`Modifier.blur` has no
+  effect pre-S — acceptable graceful degradation, not a crash) with a black
+  vertical-gradient scrim (18%→48% alpha) behind the text for legibility
+  regardless of how bright the source image is. Title/quote text styling
+  itself untouched, per the request not to disturb the fonts.
+- `Theme.kt`: new `LocalDayPeriod` CompositionLocal, computed once per app
+  launch and provided from `LoopwiseTheme`. `ColorScheme.background` and
+  `.surface` are blended toward the current period's `tint` (12%/8% — kept
+  low so existing per-row color logic like `HabitRow`'s habit-color overlays
+  still reads clearly against it) via `lerp`.
+- `BottomNavBar.kt`: selected tab's icon/label/indicator now use the current
+  period's `accent` via `NavigationBarItemDefaults.colors(...)` instead of a
+  fixed purple.
+- `TopBannerHeader` reads the same `LocalDayPeriod` the rest of the app does
+  (rather than computing its own `DayPeriod.current()`), so the header image
+  and the app-wide tint/accent can never disagree within one session.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean
+(`DayPeriodTest` updated for the new 6-hour boundaries + an "every band is
+exactly 6 hours" coverage check). On-device at the real device time (NIGHT
+band): confirmed the blurred moonlit-night header, the bottom nav's selected
+tab in the matching periwinkle accent, and a subtle navy-tinted background —
+consistent across Today/Schedule/Reports (Journal not re-screenshotted this
+round but uses the same shared `TopBannerHeader`/theme, so no reason to
+expect it differs). Dawn/day/dusk weren't observed live on-device (would need
+to change the system clock), but the banding logic is exhaustively unit-
+tested and the per-band images/colors are static data, not conditional
+logic, so the same confidence carries over.
+
+---
+
 ## 2026-10-21 (cont'd 2) — Header redesign + fixed a real "1/1" completion-label bug
 
 **Objective:** User feedback on the quote-banner/color-pass round: the top banner
