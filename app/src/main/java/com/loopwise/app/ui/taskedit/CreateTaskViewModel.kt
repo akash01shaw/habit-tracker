@@ -1,11 +1,15 @@
 package com.loopwise.app.ui.taskedit
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loopwise.app.data.repository.AuthRepository
 import com.loopwise.app.data.repository.TaskRepository
 import com.loopwise.app.domain.model.Task
 import com.loopwise.app.notifications.ReminderScheduler
+import com.loopwise.app.ui.theme.BuildPalette
+import com.loopwise.app.ui.theme.DayPeriod
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +27,7 @@ data class CreateTaskFormState(
     val completedAt: Instant? = null,
     val originalReminderTime: Instant? = null,
     val title: String = "",
+    val color: Long = BuildPalette.Blue.toArgbLong(),
     val dueDate: LocalDate = LocalDate.now(),
     val dueTime: LocalTime? = null,
     val priorityFlag: Boolean = false,
@@ -37,7 +42,10 @@ data class CreateTaskFormState(
 ) {
     val isEditing: Boolean get() = taskId != null
     val canEnableReminder: Boolean get() = dueTime != null
+    val availableColors: List<Long> get() = BuildPalette.all.map { it.toArgbLong() }
 }
+
+private fun Color.toArgbLong(): Long = toArgb().toLong() and 0xFFFFFFFFL
 
 class CreateTaskViewModel(
     private val authRepository: AuthRepository,
@@ -68,6 +76,7 @@ class CreateTaskViewModel(
                 completedAt = task.completedAt,
                 originalReminderTime = task.reminderTime,
                 title = task.title,
+                color = task.color,
                 dueDate = task.dueDate ?: LocalDate.now(),
                 dueTime = task.dueTime,
                 priorityFlag = task.priorityFlag,
@@ -77,8 +86,21 @@ class CreateTaskViewModel(
         }
     }
 
+    /**
+     * Called once, only for a brand-new (not-yet-saved) task, so it starts out matching the
+     * current time-of-day theme's "to-do" accent instead of always defaulting to blue — the
+     * same reasoning as CreateEditHabitViewModel.seedThemeColorForNewHabit.
+     */
+    fun seedThemeColorForNewTask(period: DayPeriod) {
+        _formState.value = _formState.value.copy(color = period.accentTodo.toArgbLong())
+    }
+
     fun onTitleChange(value: String) {
         _formState.value = _formState.value.copy(title = value, error = null)
+    }
+
+    fun onColorChange(color: Long) {
+        _formState.value = _formState.value.copy(color = color)
     }
 
     fun onDueDateChange(date: LocalDate) {
@@ -125,6 +147,7 @@ class CreateTaskViewModel(
             id = state.taskId ?: UUID.randomUUID().toString(),
             ownerId = ownerId,
             title = state.title.trim(),
+            color = state.color,
             dueDate = state.dueDate,
             dueTime = state.dueTime,
             priorityFlag = state.priorityFlag,

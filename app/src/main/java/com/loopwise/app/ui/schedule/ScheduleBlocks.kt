@@ -50,7 +50,7 @@ fun buildScheduleBlocks(habits: List<Habit>, tasks: List<Task>, weekDates: List<
             date = dueDate,
             time = dueTime,
             label = task.title,
-            color = TASK_BLOCK_COLOR,
+            color = task.color,
             kind = ScheduleBlockKind.TASK,
             sourceId = task.id,
         )
@@ -58,6 +58,3 @@ fun buildScheduleBlocks(habits: List<Habit>, tasks: List<Task>, weekDates: List<
 
     return (habitBlocks + taskBlocks).sortedWith(compareBy({ it.date }, { it.time }))
 }
-
-/** Tasks don't carry a color of their own (spec's Today view doesn't color-code them either) — a neutral slate. */
-const val TASK_BLOCK_COLOR = 0xFF64748BL

@@ -7,6 +7,60 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd 7) — Per-task colors
+
+**Objective:** Tasks previously had no color of their own — every task on
+Today shared one flat theme color (`accentTodo`), and Schedule blocks used a
+hardcoded neutral slate (`TASK_BLOCK_COLOR`) for every task regardless of
+which one it was. Added a real per-task color, mirroring how habits already
+work, after confirming scope with the user: new tasks default to the
+current period's `accentTodo` (theme-matched, same reasoning as the new-habit
+default added earlier), and Today's task rows switch to each task's own
+color instead of the shared theme color.
+
+**Built, full stack:**
+- `Task.kt`: `val color: Long = 0xFF3B82F6L` (default rather than required,
+  unlike `Habit.color`, so the existing `ScheduleBlocksTest` fixtures didn't
+  need touching).
+- `TaskEntity.kt` / `TaskDto.kt`: threaded through `toDomain()`/`toEntity()`/
+  `toDto()`. Wire format matches the precedent `HabitDto` already set —
+  hex string (`"#RRGGBB"`), not a raw int — via the same
+  `"#%06X".format(color and 0xFFFFFFL)` / `removePrefix("#").toLong(16) or 0xFF000000L`
+  conversions.
+- `LoopwiseDatabase.kt`: version 4 → 5 (destructive migration, same pattern
+  as every prior schema bump).
+- `supabase/migrations/0005_task_color.sql`: `alter table public.tasks add
+  column if not exists color text not null default '#3B82F6'` — same
+  `not null default` shape as migrations 0003/0004.
+- `CreateTaskViewModel.kt`: `color` field + `availableColors` (reuses
+  `BuildPalette.all` — tasks have no type variants, so no avoidance-palette
+  split like habits), `onColorChange()`, `seedThemeColorForNewTask(period)`
+  (called once from `CreateTaskScreen` only when creating a new task, same
+  shape as the habit equivalent), wired into `loadForEdit()` and `save()`.
+- `CreateTaskScreen.kt`: added the same `LazyRow`-of-circles color picker
+  `CreateEditHabitScreen` already has.
+- `ScheduleBlocks.kt`: task blocks now carry `task.color` instead of the
+  removed `TASK_BLOCK_COLOR` constant.
+- `TaskRow.kt`: switched from `LocalDayPeriod.current.accentTodo` to
+  `Color(task.color)`, per the user's choice — Today's task rows are now
+  genuinely per-task colored, matching how `HabitRow` already uses
+  `Color(habit.color)`.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean
+(updated `ScheduleBlocksTest` to assert a task block carries the task's own
+color, not a constant). On-device: Room v4→v5 migration applied cleanly (no
+crash — local data wiped and re-synced from Supabase as expected for this
+destructive-migration project), created a task ("BuyGroceries") with the
+Green swatch explicitly picked, confirmed it renders with a distinct green
+background on Today, correctly different from the pink/magenta `accentTodo`
+the To-Do section header still uses.
+
+**Still open:** the Supabase migration needs to be run in the SQL editor
+before task colors will sync to the cloud (same caveat as every prior
+migration in this log).
+
+---
+
 ## 2026-10-21 (cont'd 6) — Per-period light/dark + theme-matched default habit color
 
 **Objective:** Two follow-up requests after reviewing the illustrated theme. (1)

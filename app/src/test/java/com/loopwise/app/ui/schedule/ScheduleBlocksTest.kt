@@ -76,11 +76,12 @@ class ScheduleBlocksTest {
     }
 
     @Test
-    fun `a task with a due time in the week produces one block`() {
+    fun `a task with a due time in the week produces one block carrying the task's own color`() {
         val task = Task(
             id = "t1",
             ownerId = "u1",
             title = "Dentist",
+            color = 0xFFEC4899,
             dueDate = weekDates[2],
             dueTime = LocalTime.of(14, 0),
         )
@@ -89,6 +90,7 @@ class ScheduleBlocksTest {
         assertEquals(1, blocks.size)
         assertEquals(ScheduleBlockKind.TASK, blocks.first().kind)
         assertEquals("Dentist", blocks.first().label)
+        assertEquals(0xFFEC4899, blocks.first().color)
     }
 
     @Test

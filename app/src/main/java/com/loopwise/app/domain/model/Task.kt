@@ -8,6 +8,7 @@ data class Task(
     val id: String,
     val ownerId: String,
     val title: String,
+    val color: Long = 0xFF3B82F6L,
     val dueDate: LocalDate? = null,
     val dueTime: LocalTime? = null,
     val priorityFlag: Boolean = false,
