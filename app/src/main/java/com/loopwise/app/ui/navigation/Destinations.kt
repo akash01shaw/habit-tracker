@@ -28,6 +28,8 @@ sealed class Destination(val route: String) {
     }
 
     data object NewJournalEntry : Destination("journal/new")
+
+    data object NightlyReview : Destination("nightly_review")
 }
 
 data class BottomTab(val destination: Destination, val label: String, val icon: ImageVector)

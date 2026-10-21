@@ -7,6 +7,120 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-10-21 (cont'd 8) — Nightly "must-complete" ritual notification
+
+**Objective:** The second of two features queued up from much earlier in the
+session (originally requested alongside journal categories and the color
+theming work): a nightly notification, at a fixed time, that nags until the
+user wraps up today — finishes leftover to-dos, journals about today, and
+plans tomorrow's to-dos. Resolved open product questions via AskUserQuestion:
+10:00 PM fixed time, 15-minute snooze, and a single dedicated "Nightly
+Review" screen (rather than just deep-linking into Today + Journal
+separately) covering all three actions in one guided flow.
+
+Confirmed upfront this can only be a *practical* equivalent of "must
+complete" — Android has no true undismissible notification for a third-party
+app — so the design is an ongoing (non-swipeable) notification with only a
+Snooze action, no "mark complete" button; the only way to actually stop it
+is to open the ritual screen and finish it, or dig into system notification
+settings.
+
+**Researched first** (via a research-only subagent) the existing habit/task
+reminder infrastructure so the new feature would reuse its proven shape
+rather than inventing a second one: AlarmManager `setExactAndAllowWhileIdle`
++ inexact fallback (not WorkManager — its 15-minute periodic-work floor
+can't hit an exact time), a `BroadcastReceiver` that self-reschedules for
+the next occurrence after firing, a `BootReceiver` → WorkManager one-shot
+job to re-arm alarms after reboot (AlarmManager alarms don't survive it),
+and a single notification channel. Also confirmed there was no existing
+DataStore/SharedPreferences usage anywhere in the app — every other bit of
+local state is a Room entity.
+
+**Built:**
+- `NightlyRitualState.kt` (new): tracks "completed today" as one
+  SharedPreferences string (last-completed ISO date) rather than a new Room
+  entity+DAO+migration — a deliberate departure from the app's usual
+  Room-everywhere pattern, since this is a single local scalar with no
+  relations, no query needs, and no sync requirement (unlike every other
+  piece of app data).
+- `NightlyRitualScheduler.kt` (new): same exact-alarm pattern as
+  `ReminderScheduler`, but for one global alarm instead of per-habit/task
+  ones. A snooze just re-arms the same alarm slot 15 minutes out rather than
+  needing a second one — when it re-fires it's indistinguishable from the
+  regular nightly firing, which is exactly what's wanted (same "already
+  done" check applies either way).
+- `NightlyRitualReceiver.kt` (new): on fire, skips showing the notification
+  if `NightlyRitualState.isCompletedToday()` (e.g. the user ran it early
+  from the in-app entry point) but still reschedules tomorrow's alarm so the
+  schedule never drifts; on the notification's Snooze action, cancels it and
+  re-arms for +15 minutes.
+- `NotificationHelper.kt`: added a second channel (`nightly_ritual`,
+  `IMPORTANCE_HIGH` vs. the existing reminders channel's `DEFAULT`) and
+  `showNightlyRitualNotification()` — `setOngoing(true)` + `setAutoCancel(false)`
+  so it can't be swiped away, one Snooze action, content intent deep-links
+  into the new screen via a custom `ACTION_OPEN_NIGHTLY_REVIEW` intent
+  action (the app previously had zero deep-linking — tapping any
+  notification just reopened to the default screen).
+- `MainActivity.kt`: reads that action in both `onCreate` and `onNewIntent`
+  (the activity is already running with standard launch mode when a
+  notification is tapped from the background, so `onCreate` alone isn't
+  enough) and threads a one-shot "pending route" down through
+  `LoopwiseNavHost`/`MainNavHost`, which navigates and clears it once
+  consumed.
+- `NightlyReviewScreen.kt` + `NightlyReviewViewModel.kt` (new, under
+  `ui/nightlyreview/`): today's incomplete tasks with a complete-toggle
+  (reuses `TaskRepository`), a quick journal text box that saves a TEXT-type
+  entry (reuses `JournalRepository`), a quick-add box for tomorrow's to-dos
+  (reuses `TaskRepository.upsertTask` with `dueDate = tomorrow`), and a
+  "Done for tonight" button that marks the ritual complete and dismisses the
+  notification if it's showing. Deliberately not gated on actually filling
+  in the journal or finishing every task — there's no way to enforce that
+  honestly, so it stays a nudge rather than a fake-strict gate.
+- `TodayScreen.kt`: added a moon icon in the header actions as a manual
+  entry point (next to sign-out), so the ritual can be run early or tested
+  without waiting for 10pm.
+- `LoopwiseApp.onCreate()`: creates the new channel and arms the alarm on
+  every process start (idempotent — AlarmManager just overwrites the same
+  pending intent) — covers both normal app launches and the boot-triggered
+  process start that runs `RescheduleRemindersWorker`, so no changes were
+  needed to that worker itself.
+- Koin (`AppModule.kt`) and the manifest (`NightlyRitualReceiver`,
+  `exported=false`) wired up to match the existing patterns.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean (hit
+and fixed two real build errors along the way — Kotlin's `combine` has no
+7-flow overload, had to nest two `combine` calls; the new screen needed the
+same `ExperimentalMaterial3Api` opt-in every other `TopAppBar`-using screen
+already has; and lint's `MissingPermission` check couldn't trace the
+permission guard through an extracted helper function, fixed with a
+documented `@SuppressLint`). On-device, ran the full ritual flow end to end:
+checked off a real task (confirmed it updates reactively and shows
+"All done for today"), saved a journal entry (confirmed it appears correctly
+in the Journal tab), added a tomorrow to-do (confirmed it shows up under
+tomorrow's actual date on Today), tapped "Done for tonight" and confirmed
+`SharedPreferences` persisted today's date correctly. Also hit and
+root-caused a `dumpsys alarm` rabbit hole: `adb shell am broadcast` to
+force-fire the receiver produced no visible notification even after
+confirming the channel exists, the permission is granted, and the
+broadcast was enqueued — but the *same* technique against the
+pre-existing, already-shipped `ReminderBroadcastReceiver` also silently
+failed, proving it's an environment/OS restriction on shell-injected
+broadcasts rather than a bug in the new code. `dumpsys alarm` then
+independently confirmed the real alarm is correctly armed for
+`2026-10-21 22:00:00` (today, 10pm, exactly the configured time) via the
+same `RTC_WAKEUP` + exact-alarm mechanism already proven to work for habit
+reminders on this device (visible in the same dump's alarm history).
+
+**Still open:** the actual notification popup (ongoing style, Snooze button)
+wasn't visually observed firing this session, since that would have meant
+waiting until 10pm or fighting the adb limitation further. Worth a quick
+look tonight to eyeball it for real. The small/large icon is still the
+placeholder `android.R.drawable.ic_popup_reminder` (same existing TODO as
+the regular reminder notification) — a branded icon is a separate,
+pre-existing gap, not new to this feature.
+
+---
+
 ## 2026-10-21 (cont'd 7) — Per-task colors
 
 **Objective:** Tasks previously had no color of their own — every task on

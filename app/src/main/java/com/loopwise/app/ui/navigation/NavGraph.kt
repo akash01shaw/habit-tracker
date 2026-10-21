@@ -3,6 +3,7 @@ package com.loopwise.app.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -19,6 +20,8 @@ import com.loopwise.app.ui.habitedit.CreateEditHabitViewModel
 import com.loopwise.app.ui.journal.JournalScreen
 import com.loopwise.app.ui.journal.JournalViewModel
 import com.loopwise.app.ui.journal.NewJournalEntryScreen
+import com.loopwise.app.ui.nightlyreview.NightlyReviewScreen
+import com.loopwise.app.ui.nightlyreview.NightlyReviewViewModel
 import com.loopwise.app.ui.reports.ReportsScreen
 import com.loopwise.app.ui.reports.ReportsViewModel
 import com.loopwise.app.ui.schedule.ScheduleScreen
@@ -32,14 +35,14 @@ import com.loopwise.app.ui.today.TodayViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun LoopwiseNavHost() {
+fun LoopwiseNavHost(pendingRoute: String? = null, onPendingRouteConsumed: () -> Unit = {}) {
     val authViewModel: AuthViewModel = koinViewModel()
     val user by authViewModel.currentUser.collectAsState()
 
     if (user == null) {
         AuthNavHost(authViewModel)
     } else {
-        MainNavHost()
+        MainNavHost(pendingRoute, onPendingRouteConsumed)
     }
 }
 
@@ -63,8 +66,16 @@ private fun AuthNavHost(authViewModel: AuthViewModel) {
 }
 
 @Composable
-private fun MainNavHost() {
+private fun MainNavHost(pendingRoute: String? = null, onPendingRouteConsumed: () -> Unit = {}) {
     val navController = rememberNavController()
+
+    LaunchedEffect(pendingRoute) {
+        if (pendingRoute != null) {
+            navController.navigate(pendingRoute)
+            onPendingRouteConsumed()
+        }
+    }
+
     Scaffold(bottomBar = { LoopwiseBottomNavBar(navController) }) { padding ->
         NavHost(
             navController = navController,
@@ -79,6 +90,7 @@ private fun MainNavHost() {
                     onAddTask = { navController.navigate(Destination.CreateTask.route) },
                     onEditHabit = { habitId -> navController.navigate(Destination.EditHabit.createRoute(habitId)) },
                     onEditTask = { taskId -> navController.navigate(Destination.EditTask.createRoute(taskId)) },
+                    onOpenNightlyReview = { navController.navigate(Destination.NightlyReview.route) },
                 )
             }
             composable(Destination.Schedule.route) {
@@ -144,6 +156,13 @@ private fun MainNavHost() {
                 CreateTaskScreen(
                     viewModel = viewModel,
                     taskId = backStackEntry.arguments?.getString("taskId"),
+                    onDone = { navController.popBackStack() },
+                )
+            }
+            composable(Destination.NightlyReview.route) {
+                val viewModel: NightlyReviewViewModel = koinViewModel()
+                NightlyReviewScreen(
+                    viewModel = viewModel,
                     onDone = { navController.popBackStack() },
                 )
             }

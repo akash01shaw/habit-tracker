@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ChecklistRtl
@@ -56,6 +57,7 @@ fun TodayScreen(
     onAddTask: () -> Unit,
     onEditHabit: (String) -> Unit,
     onEditTask: (String) -> Unit,
+    onOpenNightlyReview: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
     val period = LocalDayPeriod.current
@@ -70,6 +72,9 @@ fun TodayScreen(
             TopBannerHeader(
                 screenLabel = "Today",
                 actions = {
+                    IconButton(onClick = onOpenNightlyReview) {
+                        Icon(Icons.Filled.Bedtime, contentDescription = "Nightly review")
+                    }
                     IconButton(onClick = viewModel::signOut) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sign out")
                     }

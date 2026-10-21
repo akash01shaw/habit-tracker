@@ -10,10 +10,13 @@ import com.loopwise.app.data.repository.HabitRepository
 import com.loopwise.app.data.repository.JournalRepository
 import com.loopwise.app.data.repository.TaskRepository
 import com.loopwise.app.data.repository.TimerRepository
+import com.loopwise.app.notifications.NightlyRitualScheduler
+import com.loopwise.app.notifications.NightlyRitualState
 import com.loopwise.app.notifications.ReminderScheduler
 import com.loopwise.app.ui.auth.AuthViewModel
 import com.loopwise.app.ui.habitedit.CreateEditHabitViewModel
 import com.loopwise.app.ui.journal.JournalViewModel
+import com.loopwise.app.ui.nightlyreview.NightlyReviewViewModel
 import com.loopwise.app.ui.reports.ReportsViewModel
 import com.loopwise.app.ui.schedule.ScheduleViewModel
 import com.loopwise.app.ui.taskedit.CreateTaskViewModel
@@ -42,6 +45,8 @@ val appModule = module {
     single { JournalRepository(get(), get()) }
     single { TimerRepository(get(), get()) }
     single { ReminderScheduler(get()) }
+    single { NightlyRitualScheduler(get()) }
+    single { NightlyRitualState(get()) }
     single { CsvFileWriter(get()) }
     single { HealthConnectManager(get()) }
 
@@ -53,4 +58,5 @@ val appModule = module {
     viewModel { CreateTaskViewModel(get(), get(), get()) }
     viewModel { TimerViewModel(get(), get(), get()) }
     viewModel { ScheduleViewModel(get(), get(), get()) }
+    viewModel { NightlyReviewViewModel(get(), get(), get(), get(), get()) }
 }
