@@ -79,7 +79,10 @@ private fun MainNavHost(pendingRoute: String? = null, onPendingRouteConsumed: ()
     Scaffold(bottomBar = { LoopwiseBottomNavBar(navController) }) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Destination.Today.route,
+            // Reports (the streak/week/month/year view) is the landing screen on purpose —
+            // seeing your streak and progress immediately on open is the "thrill" hook;
+            // Today is one tap away for actually acting on the day.
+            startDestination = Destination.Reports.route,
             modifier = Modifier.padding(padding),
         ) {
             composable(Destination.Today.route) {

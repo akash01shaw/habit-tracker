@@ -16,6 +16,10 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): TaskEntity?
 
+    /** Feeds the app-wide day streak — every completed task ever, regardless of due date. */
+    @Query("SELECT * FROM tasks WHERE ownerId = :ownerId AND completedAt IS NOT NULL AND isDeleted = 0")
+    fun observeCompletedTasks(ownerId: String): Flow<List<TaskEntity>>
+
     /** Used to re-arm AlarmManager reminders after a reboot (alarms don't survive one). */
     @Query("SELECT * FROM tasks WHERE ownerId = :ownerId AND isDeleted = 0 AND reminderTime IS NOT NULL AND reminderTime > :after")
     suspend fun getUpcomingReminders(ownerId: String, after: Instant): List<TaskEntity>

@@ -35,9 +35,9 @@ sealed class Destination(val route: String) {
 data class BottomTab(val destination: Destination, val label: String, val icon: ImageVector)
 
 val bottomTabs = listOf(
+    BottomTab(Destination.Reports, "Reports", Icons.Filled.BarChart),
     BottomTab(Destination.Today, "Today", Icons.Filled.CheckCircle),
     BottomTab(Destination.Schedule, "Schedule", Icons.Filled.CalendarMonth),
     BottomTab(Destination.Timer, "Timer", Icons.Filled.Timer),
-    BottomTab(Destination.Reports, "Reports", Icons.Filled.BarChart),
     BottomTab(Destination.Journal, "Journal", Icons.Filled.Book),
 )

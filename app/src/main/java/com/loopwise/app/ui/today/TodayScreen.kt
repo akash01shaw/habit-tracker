@@ -41,6 +41,7 @@ import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.theme.LocalDayPeriod
 import com.loopwise.app.ui.today.components.AvoidanceHabitRow
 import com.loopwise.app.ui.today.components.DateStrip
+import com.loopwise.app.ui.today.components.DayStreakBanner
 import com.loopwise.app.ui.today.components.HabitRow
 import com.loopwise.app.ui.today.components.SectionHeader
 import com.loopwise.app.ui.today.components.TaskRow
@@ -107,6 +108,10 @@ fun TodayScreen(
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+            item {
+                DayStreakBanner(streak = state.dayStreak, accentColor = period.accent)
+            }
+
             item {
                 DateStrip(selectedDate = state.selectedDate, onDateSelected = viewModel::selectDate)
             }

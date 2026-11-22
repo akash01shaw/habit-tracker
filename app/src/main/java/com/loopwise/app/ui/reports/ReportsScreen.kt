@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import com.loopwise.app.ui.common.ComingSoonBody
 import com.loopwise.app.ui.common.TopBannerHeader
 import com.loopwise.app.ui.reports.components.HabitReportRow
+import com.loopwise.app.ui.theme.LocalDayPeriod
+import com.loopwise.app.ui.today.components.DayStreakBanner
 
 @Composable
 fun ReportsScreen(viewModel: ReportsViewModel) {
@@ -43,6 +45,7 @@ fun ReportsScreen(viewModel: ReportsViewModel) {
     val exportError by viewModel.exportError.collectAsState()
     val exportUri by viewModel.exportUri.collectAsState()
     val context = LocalContext.current
+    val period = LocalDayPeriod.current
 
     LaunchedEffect(exportUri) {
         val uri = exportUri ?: return@LaunchedEffect
@@ -77,6 +80,8 @@ fun ReportsScreen(viewModel: ReportsViewModel) {
         }
 
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            DayStreakBanner(streak = state.dayStreak, accentColor = period.accent)
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

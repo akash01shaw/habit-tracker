@@ -21,6 +21,11 @@ class TaskRepository(
     fun observeTasksForDate(ownerId: String, date: LocalDate): Flow<List<Task>> =
         taskDao.observeTasksForDate(ownerId, date).map { list -> list.map { it.toDomain() } }
 
+    /** Feeds the day streak, which needs completed tasks across all history, not just the
+     *  currently-viewed date that [refreshFromRemote] fetches. */
+    fun observeCompletedTasks(ownerId: String): Flow<List<Task>> =
+        taskDao.observeCompletedTasks(ownerId).map { list -> list.map { it.toDomain() } }
+
     suspend fun getTask(id: String): Task? = taskDao.getById(id)?.toDomain()
 
     suspend fun getUpcomingReminders(ownerId: String): List<Task> =
@@ -46,6 +51,18 @@ class TaskRepository(
         runCatching {
             val remote = client.postgrest.from("tasks")
                 .select { filter { eq("owner_id", ownerId); eq("due_date", date.toString()) } }
+                .decodeList<TaskDto>()
+            taskDao.upsertAll(remote.map { it.toDomain().toEntity(isSynced = true) })
+        }
+    }
+
+    /** Pulls every task the owner has, not just one date's worth — same shape as
+     *  HabitRepository/JournalRepository's refresh, needed so the day streak's completed-task
+     *  history is accurate even for dates the user hasn't recently revisited. */
+    suspend fun refreshAllFromRemote(ownerId: String) {
+        runCatching {
+            val remote = client.postgrest.from("tasks")
+                .select { filter { eq("owner_id", ownerId) } }
                 .decodeList<TaskDto>()
             taskDao.upsertAll(remote.map { it.toDomain().toEntity(isSynced = true) })
         }

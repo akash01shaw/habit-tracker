@@ -26,6 +26,14 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 
+private data class TodayCoreData(
+    val habits: List<Habit>,
+    val logsForDate: List<HabitLog>,
+    val tasksForDate: List<Task>,
+    val latestLogs: List<HabitLog>,
+    val recentLogs: List<HabitLog>,
+)
+
 data class HabitWithProgress(val habit: Habit, val log: HabitLog?, val streak: Int = 0) {
     val currentValue: Double get() = log?.value ?: 0.0
     val isDone: Boolean get() = log?.isDone ?: false
@@ -40,6 +48,7 @@ data class TodayUiState(
     val tasks: List<Task> = emptyList(),
     val habits: List<HabitWithProgress> = emptyList(),
     val avoidanceHabits: List<AvoidanceHabitState> = emptyList(),
+    val dayStreak: Int = 0,
     val isSignedIn: Boolean = true,
 )
 
@@ -72,20 +81,24 @@ class TodayViewModel(
             flowOf(TodayUiState(isSignedIn = false))
         } else {
             val today = LocalDate.now()
-            combine(
+            val core = combine(
                 habitRepository.observeHabits(user.id),
                 habitRepository.observeLogsForDate(user.id, date),
                 taskRepository.observeTasksForDate(user.id, date),
                 habitRepository.observeLatestLogPerHabit(user.id),
                 habitRepository.observeLogsInRangeForUser(user.id, today.minusDays(400), today),
-            ) { habits, logs, tasks, latestLogs, recentLogs ->
-                val logsByHabit = logs.associateBy { it.habitId }
-                val latestLogByHabit = latestLogs.associateBy { it.habitId }
-                val recentLogsByHabit = recentLogs.groupBy { it.habitId }
+            ) { habits, logsForDate, tasksForDate, latestLogs, recentLogs ->
+                TodayCoreData(habits, logsForDate, tasksForDate, latestLogs, recentLogs)
+            }
+
+            core.combine(taskRepository.observeCompletedTasks(user.id)) { data, completedTasks ->
+                val logsByHabit = data.logsForDate.associateBy { it.habitId }
+                val latestLogByHabit = data.latestLogs.associateBy { it.habitId }
+                val recentLogsByHabit = data.recentLogs.groupBy { it.habitId }
                 TodayUiState(
                     selectedDate = date,
-                    tasks = tasks,
-                    habits = habits
+                    tasks = data.tasksForDate,
+                    habits = data.habits
                         .filter { it.type != HabitType.AVOIDANCE && it.isScheduledOn(date) }
                         .map { habit ->
                             HabitWithProgress(
@@ -94,7 +107,7 @@ class TodayViewModel(
                                 streak = computeCurrentStreak(habit, recentLogsByHabit[habit.id].orEmpty(), today),
                             )
                         },
-                    avoidanceHabits = habits
+                    avoidanceHabits = data.habits
                         .filter { it.type == HabitType.AVOIDANCE }
                         .map { habit ->
                             AvoidanceHabitState(
@@ -102,6 +115,7 @@ class TodayViewModel(
                                 since = latestLogByHabit[habit.id]?.loggedAt ?: habit.createdAt,
                             )
                         },
+                    dayStreak = computeDayStreak(data.recentLogs, completedTasks, today),
                     isSignedIn = true,
                 )
             }
@@ -118,6 +132,7 @@ class TodayViewModel(
         viewModelScope.launch {
             habitRepository.refreshFromRemote(userId)
             taskRepository.refreshFromRemote(userId, selectedDate.value)
+            taskRepository.refreshAllFromRemote(userId)
             habitRepository.syncPending()
             taskRepository.syncPending()
             syncHealthData()

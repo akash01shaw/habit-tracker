@@ -8,7 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.loopwise.app.data.export.CsvFileWriter
 import com.loopwise.app.data.repository.AuthRepository
 import com.loopwise.app.data.repository.HabitRepository
+import com.loopwise.app.data.repository.TaskRepository
 import com.loopwise.app.domain.model.HabitType
+import com.loopwise.app.ui.today.computeDayStreak
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,12 +29,14 @@ data class ReportsUiState(
     val range: ReportRange = ReportRange.WEEK,
     val sort: ReportSort = ReportSort.COMPLETION,
     val reports: List<HabitReport> = emptyList(),
+    val dayStreak: Int = 0,
     val isSignedIn: Boolean = true,
 )
 
 class ReportsViewModel(
     private val authRepository: AuthRepository,
     private val habitRepository: HabitRepository,
+    private val taskRepository: TaskRepository,
     private val csvFileWriter: CsvFileWriter,
 ) : ViewModel() {
 
@@ -47,7 +51,7 @@ class ReportsViewModel(
                 } else {
                     val today = LocalDate.now()
                     val from = today.minusDays((r.days - 1).toLong())
-                    habitRepository.observeHabits(user.id).flatMapLatest { habits ->
+                    val baseFlow = habitRepository.observeHabits(user.id).flatMapLatest { habits ->
                         // Avoidance habits use a continuous streak, not daily completion —
                         // reporting for them is a separate concern, not built in this pass.
                         val reportable = habits.filter { it.type != HabitType.AVOIDANCE }
@@ -68,6 +72,15 @@ class ReportsViewModel(
                             }
                         }
                     }
+
+                    // The headline day streak always looks back a fixed 400 days, independent
+                    // of the week/month/year range the user has picked for the report list.
+                    val dayStreakFlow = combine(
+                        habitRepository.observeLogsInRangeForUser(user.id, today.minusDays(400), today),
+                        taskRepository.observeCompletedTasks(user.id),
+                    ) { recentLogs, completedTasks -> computeDayStreak(recentLogs, completedTasks, today) }
+
+                    baseFlow.combine(dayStreakFlow) { base, streak -> base.copy(dayStreak = streak) }
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportsUiState())
 
