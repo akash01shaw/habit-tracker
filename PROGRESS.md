@@ -7,6 +7,74 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-11-22 — Day streak + Reports as the landing screen
+
+**Objective:** After roughly a month of not using the app, the user gave
+blunt critical feedback: the app wasn't delivering dopamine on completion,
+wasn't helping them plan or stay on top of the day, and wasn't building
+habits — "just another added task." They explicitly named what Duolingo
+does that this app doesn't: streaks, a mental-reward system, and a
+loss-aversion notification. Agreed on a 4-part plan: (1) a unified day
+streak, (2) completion haptics/animation, (3) a streak-aware nightly
+notification, (4) milestone celebrations. This entry covers part 1, plus a
+mid-stream follow-up request to make Reports the landing screen instead of
+Today, so opening the app leads with the streak/progress view first.
+
+**Built:**
+- `DayStreak.kt` (new): `computeDayStreak()` — one app-wide streak (not
+  per-habit, Duolingo-style): consecutive days with at least one completed
+  habit OR task. Deliberately a low bar — completing *anything* keeps it
+  alive. Today not yet having a completion doesn't break it (the day isn't
+  over yet); the streak only actually breaks once a full day passes with
+  nothing done. Computed on the fly from existing Room data, not stored as
+  a counter, consistent with the existing per-habit `computeCurrentStreak`
+  pattern.
+- `TaskDao.observeCompletedTasks` + `TaskRepository.observeCompletedTasks`:
+  new query feeding the streak with every completed task ever, not just one
+  date's worth.
+- `TaskRepository.refreshAllFromRemote`: found and fixed a real data gap —
+  the existing `refreshFromRemote(ownerId, date)` only ever pulled one
+  date's tasks, which would have made the streak silently wrong for
+  historical dates not recently revisited. Added a full-history refresh
+  (same shape as `HabitRepository`/`JournalRepository`'s) and call it from
+  `TodayViewModel.refresh()`.
+- `DayStreakBanner.kt` (new): the flame+number banner, front and center —
+  first item on both Today and Reports. Zero streak shows an inviting
+  prompt ("Complete something today to start your streak") rather than
+  nothing, so the mechanic is visible before it's even started.
+- `TodayViewModel` / `ReportsViewModel`: both wired to compute and expose
+  `dayStreak`. Hit Kotlin's `combine()` 5-flow overload limit in both ViewModels
+  (same issue as the earlier nightly-ritual feature) — fixed with the same
+  nested-combine pattern (inner `combine` into an intermediate data class,
+  then one more `.combine()` with the streak flow) rather than letting it
+  grow past 5 flows in one call.
+- **Mid-stream request**: made Reports the app's landing screen
+  (`NavGraph.kt`'s `startDestination`) instead of Today, and reordered
+  `bottomTabs` in `Destinations.kt` to put Reports first — the user's own
+  follow-up suggestion after seeing it live, so the tab order visually
+  matches what loads first. `ReportsViewModel` gained a `TaskRepository`
+  dependency (Koin registration in `AppModule.kt` updated to 4 args) so it
+  could compute the same streak independently of whatever week/month/year
+  range is selected (streak always looks back a fixed 400 days).
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean.
+On-device: reconnected wireless `adb` after the pairing session had expired
+(a month of inactivity also meant the Supabase free-tier project had
+auto-paused — hit "Unable to resolve host ...supabase.co" on sign-in,
+confirmed via DNS lookup from the dev machine too, not a phone issue; user
+resumed it from the Supabase dashboard and sign-in worked). Confirmed on
+screen: app now opens directly to Reports, streak banner renders correctly
+in its zero state, bottom tab order has Reports first.
+
+**Still open:** parts 2–4 of the plan (completion haptics/animation on
+`TaskRow`/`HabitRow`, streak-aware nightly notification copy in
+`NightlyRitualReceiver`/`NotificationHelper`, and milestone celebrations at
+3/7/14/30/100 days) — not started yet. All habit/task data is currently
+empty again since the Supabase reset earlier this session; streak will
+start accumulating from today.
+
+---
+
 ## 2026-10-21 (cont'd 8) — Nightly "must-complete" ritual notification
 
 **Objective:** The second of two features queued up from much earlier in the
