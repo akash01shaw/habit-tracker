@@ -7,6 +7,54 @@ reconstruct it from git history or memory once a session ends.
 
 ---
 
+## 2026-11-22 (cont'd) — Completion haptics/animation + fixed a real habit-color bug
+
+**Objective:** Continuing the 4-part motivation plan from earlier today
+(day streak, completion feedback, streak-loss notification, milestone
+celebrations) — this entry covers part 2. Separately, the user reported
+every habit they created was ending up the same color despite picking
+different swatches each time, and asked for new habits to get a random
+color on open instead.
+
+**Built:**
+- `TaskRow.kt`: added the same pop-scale `Animatable` + haptic feedback
+  (`LocalHapticFeedback` / `HapticFeedbackType.LongPress`) on completion
+  that `HabitRow.kt` already had — previously `TaskRow` had neither, a
+  real asymmetry between the two row types. `HabitRow.kt` also gained the
+  haptic call (it already had the pop animation, just not the haptic).
+
+**Found and fixed a real bug** (not just the requested randomization):
+pulled the on-device Room DB directly (`adb exec-out run-as ... cat
+databases/loopwise.db` — note plain `adb shell ... cat > file` corrupts
+binary output on Windows via CRLF translation; `exec-out` avoids it) and
+confirmed all three existing habits had the identical color `0xFFB300`
+baked in, which isn't even one of the 12 `BuildPalette` swatches — proving
+swatch taps genuinely weren't sticking, not just a perception issue.
+Root cause: `CreateEditHabitViewModel.onTypeChange` unconditionally reset
+`color` back to the theme default on every Type-chip tap, including
+re-selecting the already-current type — so picking a color then touching
+Type again (even redundantly) silently discarded the pick. Fixed so color
+only gets reassigned when switching actually crosses the build/avoidance
+palette boundary. Also replaced the time-of-day theme seeding
+(`seedThemeColorForNewHabit`) with `seedRandomColorForNewHabit` — each new
+habit now starts from a random palette color (re-rolled on every open)
+instead of everyone defaulting to the same fixed accent, which is what the
+user explicitly asked for. `CreateTaskViewModel`'s task-color seeding
+doesn't have this bug (tasks have no Type chips to re-tap) and was left
+as-is; just updated a stale comment referencing the renamed habit function.
+
+**Verified:** `gradlew assembleDebug lintDebug testDebugUnitTest` clean.
+On-device: opened New Habit three times, confirmed the swatch default
+changes each time; manually selected Rose then switched Type from Boolean
+→ Counter → Boolean and confirmed Rose stayed selected (previously would
+have silently reverted); saved a test habit and re-dumped the Room DB to
+confirm `0xFFF43F5E` (Rose) persisted exactly, then deleted the test habit.
+
+**Still open:** parts 3–4 of the motivation plan (streak-aware nightly
+notification, milestone celebrations at 3/7/14/30/100 days).
+
+---
+
 ## 2026-11-22 — Day streak + Reports as the landing screen
 
 **Objective:** After roughly a month of not using the app, the user gave
