@@ -42,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -172,9 +174,11 @@ private fun HabitActionControl(item: HabitWithProgress, color: Color, onClick: (
     val isSynced = item.habit.healthSyncSource != null
 
     val scale = remember { Animatable(1f) }
+    val haptic = LocalHapticFeedback.current
     var previousDone by remember { mutableStateOf(isDone) }
     LaunchedEffect(isDone) {
         if (isDone && !previousDone) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             scale.animateTo(1.35f, animationSpec = tween(120))
             scale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
         }

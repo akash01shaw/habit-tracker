@@ -2,6 +2,10 @@
 
 package com.loopwise.app.ui.today.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,7 +38,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.loopwise.app.domain.model.Task
@@ -45,6 +53,18 @@ private val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 fun TaskRow(task: Task, onToggle: () -> Unit, onClick: () -> Unit, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     var showMenu by remember { mutableStateOf(false) }
     val taskAccentColor = Color(task.color)
+
+    val haptic = LocalHapticFeedback.current
+    val scale = remember { Animatable(1f) }
+    var previousCompleted by remember { mutableStateOf(task.isCompleted) }
+    LaunchedEffect(task.isCompleted) {
+        if (task.isCompleted && !previousCompleted) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            scale.animateTo(1.35f, animationSpec = tween(120))
+            scale.animateTo(1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+        }
+        previousCompleted = task.isCompleted
+    }
 
     Row(
         modifier = modifier
@@ -117,7 +137,7 @@ fun TaskRow(task: Task, onToggle: () -> Unit, onClick: () -> Unit, onDelete: () 
             )
         }
 
-        IconButton(onClick = onToggle) {
+        IconButton(onClick = onToggle, modifier = Modifier.scale(scale.value)) {
             Icon(
                 imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
                 contentDescription = if (task.isCompleted) "Completed" else "Mark complete",

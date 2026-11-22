@@ -88,8 +88,7 @@ class CreateTaskViewModel(
 
     /**
      * Called once, only for a brand-new (not-yet-saved) task, so it starts out matching the
-     * current time-of-day theme's "to-do" accent instead of always defaulting to blue — the
-     * same reasoning as CreateEditHabitViewModel.seedThemeColorForNewHabit.
+     * current time-of-day theme's "to-do" accent instead of always defaulting to blue.
      */
     fun seedThemeColorForNewTask(period: DayPeriod) {
         _formState.value = _formState.value.copy(color = period.accentTodo.toArgbLong())

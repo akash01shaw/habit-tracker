@@ -14,7 +14,6 @@ import com.loopwise.app.domain.model.HabitType
 import com.loopwise.app.domain.model.HealthSyncSource
 import com.loopwise.app.notifications.ReminderScheduler
 import com.loopwise.app.ui.theme.BuildPalette
-import com.loopwise.app.ui.theme.DayPeriod
 import com.loopwise.app.ui.theme.QuitPalette
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,25 +70,24 @@ class CreateEditHabitViewModel(
 
     private var loadedHabitId: String? = null
 
-    // Replaces the flat BuildPalette.Blue/QuitPalette.first() reset below once a brand-new
-    // habit's form has been seeded with the current time-of-day theme's colors (see
-    // seedThemeColorForNewHabit). Edit mode never calls that, so these just keep today's
-    // old behavior for an in-progress edit that switches habit type.
-    private var themeBuildColor: Long = BuildPalette.Blue.toArgbLong()
-    private var themeQuitColor: Long = QuitPalette.Charcoal.toArgbLong()
+    // Anchors used when switching type crosses the build/avoidance palette boundary (see
+    // onTypeChange) — re-rolled every time a brand-new habit's form is seeded, so edit mode
+    // (which never calls seedRandomColorForNewHabit) just keeps today's old behavior.
+    private var randomBuildColor: Long = BuildPalette.all.random().toArgbLong()
+    private var randomQuitColor: Long = QuitPalette.all.random().toArgbLong()
 
     /**
-     * Called once, only for a brand-new (not-yet-saved) habit, so it starts out matching the
-     * current time-of-day theme — vivid [DayPeriod.accentHabit] for build habits, the same
-     * muted [DayPeriod.accentQuit] the "Habits I'm Quitting" section already uses for
-     * avoidance habits — instead of always defaulting to blue regardless of time of day.
+     * Called once, only for a brand-new (not-yet-saved) habit, so each new habit starts with
+     * its own random color from the relevant palette — every habit defaulting to the same
+     * fixed color (previously the time-of-day theme accent) made distinct habits visually
+     * indistinguishable unless the user remembered to manually pick a color every time.
      */
-    fun seedThemeColorForNewHabit(period: DayPeriod) {
-        themeBuildColor = period.accentHabit.toArgbLong()
-        themeQuitColor = period.accentQuit.toArgbLong()
+    fun seedRandomColorForNewHabit() {
+        randomBuildColor = BuildPalette.all.random().toArgbLong()
+        randomQuitColor = QuitPalette.all.random().toArgbLong()
         val current = _formState.value
         _formState.value = current.copy(
-            color = if (current.type == HabitType.AVOIDANCE) themeQuitColor else themeBuildColor,
+            color = if (current.type == HabitType.AVOIDANCE) randomQuitColor else randomBuildColor,
         )
     }
 
@@ -128,11 +126,23 @@ class CreateEditHabitViewModel(
     }
 
     fun onTypeChange(type: HabitType) {
+        val current = _formState.value
+        if (type == current.type) return
         val needsTarget = type == HabitType.COUNTER || type == HabitType.DURATION
-        _formState.value = _formState.value.copy(
+        val wasAvoidance = current.type == HabitType.AVOIDANCE
+        val isAvoidance = type == HabitType.AVOIDANCE
+        _formState.value = current.copy(
             type = type,
-            color = if (type == HabitType.AVOIDANCE) themeQuitColor else themeBuildColor,
-            healthSyncSource = _formState.value.healthSyncSource.takeIf { needsTarget },
+            // Build and avoidance draw from different palettes, so only reassign color when
+            // crossing that boundary — switching among BOOLEAN/COUNTER/DURATION previously
+            // reset any already-picked color back to the default on every tap, even a tap
+            // that re-selected the already-current type.
+            color = when {
+                !wasAvoidance && isAvoidance -> randomQuitColor
+                wasAvoidance && !isAvoidance -> randomBuildColor
+                else -> current.color
+            },
+            healthSyncSource = current.healthSyncSource.takeIf { needsTarget },
         )
     }
 
